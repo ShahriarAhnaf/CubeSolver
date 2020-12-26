@@ -52,7 +52,7 @@ int main()
 
 	int cubo[6][3][3] = {0}; //the cube[face][rows][columns] top right start
 
-
+	enum Color{W=1,Y, R, O, B, G};
 	cout << "1 = white, 2 = yellow, 3 = red, 4 = orange, 5 = blue, 6 = green"<< endl;
 	cout << "1 = white face(top), 2 = yellow face(bottom), 3 = red(left), 4 = orange(right), 5 = blue(front), 6 = green(back)" << endl;
 	
@@ -61,10 +61,28 @@ int main()
 		cout << "enter face " << pp + 1 << ":"<< endl;
 		for (int zz = 0; zz < 3; zz++)
 		{
-			cout << "enter row from the right: ";
+			cout << "enter row from the right: " << endl;
 			for (int z = 0; z < 3; z++) {
-				cout << endl<< "here:"; 
-				cin >> cubo[pp][zz][z];
+				char temp;
+				Color c;
+				cout << "here:"; 
+				cin >> temp;
+				switch (temp) // to take input from the user in form of letters
+				{
+				case 'W': c = W;
+					break;
+				case 'Y': c = Y;
+					break;
+				case 'R': c = R;
+					break;
+				case 'O': c = O;
+					break;
+				case 'B': c = B;
+					break;
+				case 'G': c = G;
+					break;
+				}
+				cubo[pp][zz][z] = c;
 			}
 		}
 	}
