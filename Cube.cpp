@@ -22,17 +22,35 @@ string get_Color(int ask)
 	case 6: send = "G";
 		break;
 	}
+	return send;
 }
 
+string get_Orient(int ask)
+{
+	string send;
+	switch (ask)
+	{
+	case 1: send = "top";
+		break;
+	case 2: send = "bottom";
+		break;
+	case 3: send = "left";
+		break;
+	case 4: send = "right";
+		break;
+	case 5: send = "front";
+		break;
+	case 6: send = "back";
+		break;
+	}
+
+	return send;
+}
 
 int main()
 {
 
 	int cubo[6][3][3] = {0}; //the cube[face][rows][columns] top right start
-	
-	enum cubeFaceColor {W=1, Y, R, O, B, G};
-
-	enum CubeFaceOrient { top=1, bottom, left, right, front, back };
 
 
 	cout << "1 = white, 2 = yellow, 3 = red, 4 = orange, 5 = blue, 6 = green"<< endl;
@@ -54,13 +72,13 @@ int main()
 	
 		for (int pp = 0; pp < 6; pp++) // outputting the layout cube
 		{
-			cout << "face "<< pp+1 << endl; 
+			cout << endl<< get_Orient(pp+1) << " face" << endl; 
 			for (int zz = 0; zz < 3; zz++)
 			{
 				for (int z = 0; z < 3; z++) 
 				
 				{
-					cout << cubeFaceColor(cubo[pp][zz][z]) << " ";
+					cout << get_Color(cubo[pp][zz][z]) << " ";
 				}
 				cout << endl;
 			}
