@@ -53,8 +53,8 @@ int main()
 	int cubo[6][3][3] = {0}; //the cube[face][rows][columns] top right start
 
 	enum Color{W=1,Y, R, O, B, G};
-	cout << "1 = white, 2 = yellow, 3 = red, 4 = orange, 5 = blue, 6 = green"<< endl;
-	cout << "1 = white face(top), 2 = yellow face(bottom), 3 = red(left), 4 = orange(right), 5 = blue(front), 6 = green(back)" << endl;
+	cout << "use the capital letter of the colour to represent that square i.e ( W = white)" << endl;
+	cout << "1 = white face(top), 2 = yellow face(bottom), 3 = blue(front), 4= orange(right), 5 = green(back), 6= left(red)" << endl;
 	
 	for (int pp = 0; pp < 6; pp++) // getting input of the cube
 	{
