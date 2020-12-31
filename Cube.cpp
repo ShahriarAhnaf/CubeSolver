@@ -64,6 +64,7 @@ void MoveFace(int face) //moving clockwise
 
 	//top row
 	cubo[face][0][2] = oldface[2][2]; //bottom left is now top left
+	cubo[face][0][2] = oldface[2][2]; //bottom left is now top left
 	cubo[face][0][1] = oldface[1][2]; //left middle is now top middle
 	cubo[face][0][0] = oldface[0][2]; //top left is now top right
 	//middle row
@@ -93,20 +94,23 @@ void MoveFacePrime(int face)
 
 void DisplayCube()
 {
+	
+	for(int x = 0; x < 6; x++)cout << "face " << x+1 << "   ";
 
-	for (int pp = 0; pp < 6; pp++) // outputting the layout cube
+	cout << endl;
+	for (int rows = 0; rows < 3; rows++)
 	{
-		cout << endl << get_Orient(pp + 1) << " face" << endl;
-		for (int zz = 0; zz < 3; zz++)
+		for (int faces = 0; faces < 6; faces++)
 		{
-			for (int z = 0; z < 3; z++)
-
+			for (int columns = 0; columns < 3; columns++)
 			{
-				cout << get_Color(cubo[pp][zz][z]) << " ";
+				cout << get_Color(cubo[faces][rows][columns]) << " ";
 			}
-			cout << endl;
+			cout << "   ";
 		}
+		cout << endl;
 	}
+	cout << endl;
 }
 int main()
 {
@@ -164,6 +168,7 @@ int main()
 	}
 	DisplayCube();
 	MoveFace(0); // just testting
+	MoveFace(1);
 	DisplayCube();
 }
 
