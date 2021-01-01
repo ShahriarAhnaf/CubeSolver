@@ -54,22 +54,21 @@ void MoveFace(int face) //moving clockwise
 
 	//initializing the array with the old faces
 	//look into faster methods later
-	for (int x = 0; x < 3; x++)
+	for (int y = 0; y < 3; y++)
 	{
-		for (int y = 0; y < 3; y++)
+		for (int x = 0; x < 3; x++)
 		{
-			oldface[x][y] = cubo[face][x][y];
+			oldface[y][x] = cubo[face][y][x];
 		}
 	}
 
 	//top row
 	cubo[face][0][2] = oldface[2][2]; //bottom left is now top left
-	cubo[face][0][2] = oldface[2][2]; //bottom left is now top left
 	cubo[face][0][1] = oldface[1][2]; //left middle is now top middle
 	cubo[face][0][0] = oldface[0][2]; //top left is now top right
 	//middle row
 	cubo[face][1][0] = oldface[0][1]; //top middle is now middle right
-	cubo[face][1][2] = oldface[2][0]; //bottom middle is now middle left
+	cubo[face][1][2] = oldface[2][1]; //bottom middle is now middle left
 	//bottom row
 	cubo[face][2][0] = oldface[0][0]; //top right is now bottom right
 	cubo[face][2][1] = oldface[1][0]; //middle right is now bottom middle 
@@ -161,14 +160,13 @@ int main()
 			{
 				for (int z = 0; z < 3; z++) 
 				{
-					cubo[pp][zz][z] = z+1;
+					cubo[pp][zz][z] = z+3;
 				}
 			}
 		}
 	}
 	DisplayCube();
 	MoveFace(0); // just testting
-	MoveFace(1);
 	DisplayCube();
 }
 
