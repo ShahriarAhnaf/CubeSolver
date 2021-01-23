@@ -81,13 +81,26 @@ void MoveFacePrime(int face)
 
 	//initializing the array with the old faces
 	//look into faster methods later
-	for (int x = 0; x < 3; x++)
+	for (int y = 0; y < 3; y++)
 	{
-		for (int y = 0; y < 3; y++)
+		for (int x = 0; x < 3; x++)
 		{
-			oldface[x][y] = cubo[face][x][y];
+			oldface[y][x] = cubo[face][y][x];
 		}
 	}
+
+	
+	//top row
+	cubo[face][2][2] = oldface[0][2]; //now top left is bottom left 
+	cubo[face][1][2] = oldface[0][1]; //  now top middle is left middle
+	cubo[face][0][2] = oldface[0][0]; // now top right is top left 
+	//middle row
+	cubo[face][0][1] = oldface[1][0]; // now middle right is top middle 
+	cubo[face][2][1] = oldface[1][2]; // now middle left is bottom middle 
+	//bottom row
+	cubo[face][0][0] = oldface[2][0]; //now bottom right is top right  
+	cubo[face][1][0] = oldface[2][1]; // now bottom middle is middle right 
+	cubo[face][2][0] = oldface[2][2]; // now top left is bottom right 
 }
 
 
@@ -167,6 +180,8 @@ int main()
 	}
 	DisplayCube();
 	MoveFace(0); // just testting
+	DisplayCube();
+	MoveFacePrime(0);
 	DisplayCube();
 }
 
