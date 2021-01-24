@@ -179,10 +179,6 @@ int main()
 		}
 	}
 	DisplayCube();
-	MoveFace(0); // just testting
-	DisplayCube();
-	MoveFacePrime(0);
-	DisplayCube();
 
 	while (true)
 	{
@@ -195,7 +191,7 @@ int main()
 		cin >> move;
 		cout << endl;
 		
-		if (face == 7) break;
+		 if (face == 7) break;
 		if (move == 1) {
 			MoveFace(face -1);
 		}
