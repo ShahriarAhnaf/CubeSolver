@@ -183,5 +183,29 @@ int main()
 	DisplayCube();
 	MoveFacePrime(0);
 	DisplayCube();
+
+	while (true)
+	{
+		int face, move;
+		cout << "enter face number and 1 for clockwise and 2 for counter clockwise, enter 7 for exit loop" << endl;
+		cout << "face : "; 
+		cin >> face;
+		cout << endl;
+		cout << "move direction : "; 
+		cin >> move;
+		cout << endl;
+		
+		if (face == 7) break;
+		if (move == 1) {
+			MoveFace(face -1);
+		}
+		else
+		{
+			MoveFacePrime(face -1);	
+		}
+
+		DisplayCube();
+	}
+
 }
 
