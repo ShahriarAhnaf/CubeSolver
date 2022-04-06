@@ -3,6 +3,24 @@
 
 using namespace std;
 
+//ROYGBV
+enum colors{
+	R=0,
+	O,
+	Y,
+	G,
+	B,
+	V
+};
+
+class Cube_Face{
+	public:
+	
+
+};
+
+
+
 int cubo[6][3][3] = { 0 }; //the cube[face][rows][columns] top right start
 
 string get_Color(int ask)
