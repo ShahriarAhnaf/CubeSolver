@@ -1,23 +1,7 @@
 #include <iostream>
 #include <cmath>
-
+#include "Cube.h"
 using namespace std;
-
-//ROYGBV
-enum colors{
-	R=0,
-	O,
-	Y,
-	G,
-	B,
-	V
-};
-
-class Cube_Face{
-	public:
-	
-
-};
 
 
 

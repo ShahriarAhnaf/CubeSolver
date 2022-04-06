@@ -15,3 +15,22 @@ when middle 3-6 moves ( column 3 = left, column 1 = right)z
 -  for 4(6 unaffected),  3 5 faces are affected on the side columns(array colum 1 and  3),  1 2 side columns are affected(array column 3 and 1).
 -  for 6(4 unaffected),  3 5 faces are affected on the side columns(array colum 3 and  1),  1 2 top row are affected(array column 1 and 3).  
  
+
+
+
+ PLANNIGN GAME
+
+ class for cube_side{
+
+ }
+ class for game state{
+     cube and functions to search for next move 
+ }
+ go smaller goals using the fridrich method! cross, first layer, middle layer, then pattern matching. 
+
+ NEED DYNAMIC ARRAYS
+
+
+
+ start with full cube, person messes it up using keys, tehn solves.
+ 
