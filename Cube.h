@@ -19,20 +19,29 @@ enum goal{
 };
 
 
-struct corner // dynamic allocation pointers
+class Corner // dynamic allocation pointers
 {
-	char* cor[8*3];
+	private: 
+		char* cor[8*3];
+	public:
+		char* get_corner();
+		void set_Corner(char* dynamic_edge);
 };
 
-struct edge // dynamic allocation pointers
-{
-	char* ed[12*2];
+class Edge // dynamic allocation pointers
+{	
+	private:
+		char* ed[12*2];
+	public:
+	char* get_edge();
+	void set_Edge(char* dynamic_edge);
 };
 
-class RubixCube{
+// inherit from the homies
+class RubixCube : public Edge, public Corner{
 private:
-	corner Corner;
-	edge Edge;
+	Corner corner;
+	Edge edge;
 public: 
 	RubixCube(){
 		char* dynamic_corner = new char[8*3]; //2d arrays are just chonks of 1d arrays. m * n length;
@@ -40,20 +49,23 @@ public:
 		set_Corner(dynamic_corner);
 		set_Edge(dynamic_edge);
 	};
-	RubixCube(corner &passed_Corner, edge &passed_Edge){
-		Edge = passed_Edge;
-		Corner = passed_Corner;
+	RubixCube(Corner &passed_Corner, Edge &passed_Edge){
+		edge = passed_Edge;
+		corner = passed_Corner;
 	};
 	//DESTROYYYYY
 	~RubixCube(){
-		char* corner = get_Corner()->cor;
-		char* edge = get_Edge()->ed;
+		char* corner = get_corner();
+		char* edge = get_edge();
+		delete[] corner;
+		delete[] edge;
+		corner = nullptr;
+		edge = nullptr;
 	};
 
-	corner* get_Corner();
-	void set_Corner(char* dynamic_corner);
-	edge* get_Edge();
-	void set_Edge(char* dynamic_edge);
+	Corner get_Corner();
+	Edge get_Edge();
+	
 	};
 
 class GameState{
