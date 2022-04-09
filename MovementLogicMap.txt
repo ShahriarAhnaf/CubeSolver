@@ -1,28 +1,14 @@
-face movement logic!
-
-middle faces are looked at with the white on top, while white and yellow faces are looked at with blue on top. 
-movements have two versions labeled with the color or color' ie( MoveWhite, moveWhite'). 
-
-since the faces are just number iusing if statements is sufficient to see which faces affect which when the mmovement of the cube is done in any of the faces
-
-when top(1) moves , 2 unaffected, 3 4 5 6 faces are affected in the top row(array row 1), the rows are shifted over incrementally between 3-6
-
-when bottom(2) moves , 1 unaffected, 3 4 5 6 faces are affected in the bottom row(array row 3), the rows are shifted over incrementally between 3-6
-
-when middle 3-6 moves ( column 3 = left, column 1 = right)z
--  for 3(5 unaffected),  4 6 faces are affected on the side columns(array colum 3 and  1),  1 2 top row are affected(array row 1). 
--  for 5(3 unaffected),  4 6 faces are affected on the side columns(array colum 1 and  3),  1 2 bottom row are affected(array row 3). 
--  for 4(6 unaffected),  3 5 faces are affected on the side columns(array colum 1 and  3),  1 2 side columns are affected(array column 3 and 1).
--  for 6(4 unaffected),  3 5 faces are affected on the side columns(array colum 3 and  1),  1 2 top row are affected(array column 1 and 3).  
- 
-
-
-
  PLANNIGN GAME
 
- class for cube_side{
 
- }
+DONT USE SIDES 
+use the corner and edges approach to side step over counting problems
+
+
+    class for cube(){
+
+    }
+
  class for game state{
      cube and functions to search for next move 
  }

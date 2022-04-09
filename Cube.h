@@ -19,28 +19,49 @@ enum goal{
 };
 
 
-class Cube_face{
-	private:
-		Cube_face();
-		Cube_face();
-		~Cube_face();
-		char face[3][3];
-	private:
+struct corner // dynamic allocation pointers
+{
+	char* cor[8*3];
 };
+
+struct edge // dynamic allocation pointers
+{
+	char* ed[12*2];
+};
+
 class RubixCube{
 private:
-	Cube_face* front;
-	Cube_face* back;
-	Cube_face* left;
-	Cube_face* right;
-	Cube_face* top;
-	Cube_face* bottom;
+	corner Corner;
+	edge Edge;
 public: 
-	RubixCube();
-	~RubixCube();
-};
+	RubixCube(){
+		char* dynamic_corner = new char[8*3]; //2d arrays are just chonks of 1d arrays. m * n length;
+		char* dynamic_edge = new char[12*2]; //2d arrays are just chonks of 1d arrays. m * n length;
+		set_Corner(dynamic_corner);
+		set_Edge(dynamic_edge);
+	};
+	RubixCube(corner &passed_Corner, edge &passed_Edge){
+		Edge = passed_Edge;
+		Corner = passed_Corner;
+	};
+	//DESTROYYYYY
+	~RubixCube(){
+		char* corner = get_Corner()->cor;
+		char* edge = get_Edge()->ed;
+	};
+
+	corner* get_Corner();
+	void set_Corner(char* dynamic_corner);
+	edge* get_Edge();
+	void set_Edge(char* dynamic_edge);
+	};
 
 class GameState{
-
+private: 
+	RubixCube Cube;
+	bool closer;
+public: 
+	GameState();
+	~GameState();
 };
 #endif
