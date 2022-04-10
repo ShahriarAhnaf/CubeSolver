@@ -17,24 +17,53 @@ enum goal{
 	middle_layer,
 	final_layer
 };
+class dynamic2dArray{
+	private:
+	char* pointer;
+	int row_limit;
+	int column_limit;
+	public:
+	dynamic2dArray(int rows, int columns){
+		pointer = new T[rows*columns];
+		row_limit = rows;
+		column_limit = columns;
+	}
+	~dynamic2dArray();
+	char operator()(int rows, int columns){
+		// error handle for index overflow
+		// with array[2][5] -> array[10] -> 0-9 -> array[1][4]
+		if (columns > column_limit || rows > row_limit){
+			throw std::invalid_argument("out of index, array bounds must be within the 2d array");
+		}
+		// 
+		return *((rows * column_limit * sizeof(char)) + columns*sizeof(char)); // return the derefed location of the array.
+	}
+};
 
-
-class Corner // dynamic allocation pointers
+class Corner : public dynamic2dArray<char> // dynamic allocation pointers
 {
 	private: 
-		char* cor[8*3];
+		dynamic2dArray<char> cor(8,3);
 	public:
+		Corner(){
+			dynamic2dArray(8,3);
+		}
+		~Corner();
 		char* get_corner();
 		void set_Corner(char* dynamic_edge);
 };
 
-class Edge // dynamic allocation pointers
+class Edge : public dynamic2dArray<char> // dynamic allocation pointers
 {	
 	private:
-		char* ed[12*2];
+		dynamic2dArray ed;
 	public:
-	char* get_edge();
-	void set_Edge(char* dynamic_edge);
+	// return a char pointer
+	char* get_edge(){
+		return ed; // dereference the char pointer to array for the array. 
+	}
+	void set_Edge(char* dynamic_edge){
+	}
 };
 
 // inherit from the homies
@@ -55,12 +84,7 @@ public:
 	};
 	//DESTROYYYYY
 	~RubixCube(){
-		char* corner = get_corner();
-		char* edge = get_edge();
-		delete[] corner;
-		delete[] edge;
-		corner = nullptr;
-		edge = nullptr;
+		
 	};
 
 	Corner get_Corner();
