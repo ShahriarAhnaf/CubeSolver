@@ -4,18 +4,20 @@
 DONT USE SIDES 
 use the corner and edges approach to side step over counting problems
 
+    class for dynamic array(){
 
+    }
+    class for edges and corners(){
+
+    }
     class for cube(){
 
     }
 
- class for game state{
-     cube and functions to search for next move 
- }
+     class for game state{
+         cube and functions to search for next move 
+    }  
  go smaller goals using the fridrich method! cross, first layer, middle layer, then pattern matching. 
-
- NEED DYNAMIC ARRAYS
-
 
 
  start with full cube, person messes it up using keys, tehn solves.

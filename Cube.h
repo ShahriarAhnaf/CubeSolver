@@ -17,6 +17,7 @@ enum goal{
 	middle_layer,
 	final_layer
 };
+
 class dynamic2dArray{
 	private:
 	char* pointer;
@@ -24,9 +25,14 @@ class dynamic2dArray{
 	int column_limit;
 	public:
 	dynamic2dArray(int rows, int columns){
-		pointer = new T[rows*columns];
+		pointer = new char[rows*columns];
 		row_limit = rows;
 		column_limit = columns;
+	}
+	dynamic2dArray(){
+		pointer = nullptr;
+		row_limit = 0;
+		column_limit = 0;
 	}
 	~dynamic2dArray();
 	char operator()(int rows, int columns){
@@ -36,30 +42,40 @@ class dynamic2dArray{
 			throw std::invalid_argument("out of index, array bounds must be within the 2d array");
 		}
 		// 
-		return *((rows * column_limit * sizeof(char)) + columns*sizeof(char)); // return the derefed location of the array.
+		return pointer[(rows * column_limit + columns)]; // return the derefed location of the array.
+	}
+	void operator=(dynamic2dArray* rightSide){
+		this->row_limit = rightSide->row_limit;
+		this->column_limit = rightSide->column_limit;
+		if (pointer != nullptr) delete[] pointer;
+		this->pointer = rightSide->pointer;
+		
 	}
 };
 
-class Corner : public dynamic2dArray<char> // dynamic allocation pointers
+class Corner : public dynamic2dArray // dynamic allocation pointers
 {
 	private: 
-		dynamic2dArray<char> cor(8,3);
+		dynamic2dArray cor;
 	public:
 		Corner(){
-			dynamic2dArray(8,3);
+			cor = dynamic2dArray(8,3);
+		}
+		Corner(dynamic2dArray* nyeah){
+			cor = nyeah;
 		}
 		~Corner();
 		char* get_corner();
 		void set_Corner(char* dynamic_edge);
 };
 
-class Edge : public dynamic2dArray<char> // dynamic allocation pointers
+class Edge : public dynamic2dArray // dynamic allocation pointers
 {	
 	private:
 		dynamic2dArray ed;
 	public:
 	// return a char pointer
-	char* get_edge(){
+	dynamic2dArray get_edge(){
 		return ed; // dereference the char pointer to array for the array. 
 	}
 	void set_Edge(char* dynamic_edge){
