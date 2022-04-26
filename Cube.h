@@ -1,4 +1,5 @@
 #pragma once
+#include "Solver.h"
 #ifndef CUBE_H
 #define CUBE_H
 //ROYGBV
@@ -48,15 +49,17 @@ class dynamic2dArray{
 		this->row_limit = rightSide->row_limit;
 		this->column_limit = rightSide->column_limit;
 		if (pointer != nullptr) delete[] pointer;
-		this->pointer = rightSide->pointer;
-		
+		this->pointer = rightSide->pointer;	
 	}
 };
 
 class Corner : public dynamic2dArray // dynamic allocation pointers
 {
 	private: 
+		// corners
 		dynamic2dArray cor;
+		// the three centers that are independent 
+		short center[3];
 	public:
 		Corner(){
 			cor = dynamic2dArray(8,3);
@@ -65,20 +68,25 @@ class Corner : public dynamic2dArray // dynamic allocation pointers
 			cor = nyeah;
 		}
 		~Corner();
-		char* get_corner();
+		dynamic2dArray* get_Corner(){
+			return &cor;
+		}
 		void set_Corner(char* dynamic_edge);
 };
 
 class Edge : public dynamic2dArray // dynamic allocation pointers
 {	
 	private:
+	// 
 		dynamic2dArray ed;
+		short center[2]; // 
 	public:
 	// return a char pointer
-	dynamic2dArray get_edge(){
-		return ed; // dereference the char pointer to array for the array. 
+	dynamic2dArray* get_edge(){
+		return &ed; // dereference the char pointer to array for the array. 
 	}
 	void set_Edge(char* dynamic_edge){
+
 	}
 };
 
