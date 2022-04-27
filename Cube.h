@@ -48,7 +48,7 @@ class dynamic2dArray{
 	void operator=(dynamic2dArray* rightSide){
 		this->row_limit = rightSide->row_limit;
 		this->column_limit = rightSide->column_limit;
-		if (pointer != nullptr) delete[] pointer;
+		if (pointer != nullptr) delete[] pointer; // delete the array before assigning to new one.
 		this->pointer = rightSide->pointer;	
 	}
 };
@@ -59,7 +59,6 @@ class Corners : public dynamic2dArray // dynamic allocation pointers
 		// corners
 		dynamic2dArray cor;
 		// the three centers that are independent 
-		short center[3];
 	public:
 		Corners(){
 			cor = dynamic2dArray(8,3);
@@ -78,8 +77,7 @@ class Edges : public dynamic2dArray // dynamic allocation pointers
 {
 	private:
 	// 
-		dynamic2dArray ed;
-		short center[2]; // 
+		dynamic2dArray ed;// 
 	public:
 		Edges(){
 			ed = dynamic2dArray(12,2);
@@ -101,6 +99,7 @@ class RubixCube : public Edges, public Corners{
 private:
 	Corners corners;
 	Edges edges;
+	dynamic2dArray centers;
 public: 
 	RubixCube(){
 		char* dynamic_corner = new char[8*3]; //2d arrays are just chonks of 1d arrays. m * n length;
@@ -108,7 +107,7 @@ public:
 		set_Corner(dynamic_corner);
 		set_Edge(dynamic_edge);
 	};
-	RubixCube(Corner &passed_Corner, Edge &passed_Edge){
+	RubixCube(Corners &passed_Corner, Edges &passed_Edge){
 		edges = passed_Edge;
 		corners = passed_Corner;
 	};
@@ -116,9 +115,8 @@ public:
 	~RubixCube(){
 		
 	};
-
-	Corner get_Corner();
-	Edge get_Edge();
+	Corners get_Corner();
+	Edges get_Edge();
 	
 };
 
