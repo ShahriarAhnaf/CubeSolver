@@ -53,7 +53,7 @@ class dynamic2dArray{
 	}
 };
 
-class Corner : public dynamic2dArray // dynamic allocation pointers
+class Corners : public dynamic2dArray // dynamic allocation pointers
 {
 	private: 
 		// corners
@@ -61,26 +61,32 @@ class Corner : public dynamic2dArray // dynamic allocation pointers
 		// the three centers that are independent 
 		short center[3];
 	public:
-		Corner(){
+		Corners(){
 			cor = dynamic2dArray(8,3);
 		}
-		Corner(dynamic2dArray* nyeah){
+		Corners(dynamic2dArray* nyeah){
 			cor = nyeah;
 		}
-		~Corner();
+		~Corners();
 		dynamic2dArray* get_Corner(){
 			return &cor;
 		}
 		void set_Corner(char* dynamic_edge);
 };
 
-class Edge : public dynamic2dArray // dynamic allocation pointers
-{	
+class Edges : public dynamic2dArray // dynamic allocation pointers
+{
 	private:
 	// 
 		dynamic2dArray ed;
 		short center[2]; // 
 	public:
+		Edges(){
+			ed = dynamic2dArray(12,2);
+		}
+		Edges(dynamic2dArray* nyeah){
+			ed = nyeah;
+		}
 	// return a char pointer
 	dynamic2dArray* get_edge(){
 		return &ed; // dereference the char pointer to array for the array. 
@@ -91,10 +97,10 @@ class Edge : public dynamic2dArray // dynamic allocation pointers
 };
 
 // inherit from the homies
-class RubixCube : public Edge, public Corner{
+class RubixCube : public Edges, public Corners{
 private:
-	Corner corner;
-	Edge edge;
+	Corners corners;
+	Edges edges;
 public: 
 	RubixCube(){
 		char* dynamic_corner = new char[8*3]; //2d arrays are just chonks of 1d arrays. m * n length;
@@ -103,8 +109,8 @@ public:
 		set_Edge(dynamic_edge);
 	};
 	RubixCube(Corner &passed_Corner, Edge &passed_Edge){
-		edge = passed_Edge;
-		corner = passed_Corner;
+		edges = passed_Edge;
+		corners = passed_Corner;
 	};
 	//DESTROYYYYY
 	~RubixCube(){
@@ -114,7 +120,10 @@ public:
 	Corner get_Corner();
 	Edge get_Edge();
 	
-	};
+};
+
+
+
 
 class GameState{
 private: 

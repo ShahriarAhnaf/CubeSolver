@@ -1,7 +1,43 @@
  PLANNIGN GAME
 
+The computer looks at the cube using an objective view.
+faces
 
-DONT USE SIDES 
+front
+1 1E 2    
+4E C 2E
+4 3E 3  
+
+RIGHT 
+2 8E 5 
+2E C 9E
+3 7E 8  
+
+LEFT
+1 5E 6 
+11E C 4E
+4 6E 7  
+
+Top 
+LEFT
+1 5E 6 
+11E C 4E
+4 6E 7  
+
+Bottom
+LEFT
+1 5E 6 
+11E C 4E
+4 6E 7  
+
+BACK
+5 12E 6 
+9E C 11E
+8 10E 7  
+
+HOW TO TELL THE CENTER CONNECTION???
+- index 1 is 
+
 use the corner and edges approach to side step over counting problems
 
     class for dynamic array(){
