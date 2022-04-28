@@ -1,16 +1,53 @@
 #pragma once
 #include "Solver.h"
+#include <stdint.h>
 #ifndef CUBE_H
 #define CUBE_H
-//ROYGBV
-enum colors{
-	R=0,
-	O,
-	Y,
-	G,
-	B,
-	V
-};
+
+	/*
+   * The cube is laid out as follows.
+   *
+   * The sides:
+   *
+   *    U
+   *  L F R B
+   *    D
+   *
+   * Color wise:
+   *
+   *          W W W
+   *          W W W
+   *          W W W
+   *
+   *  G G G   R R R   B B B   O O O
+   *  G G G   R R R   B B B   O O O
+   *  G G G   R R R   B B B   O O O
+   *
+   *          Y Y Y
+   *          Y Y Y
+   *          Y Y Y
+   *
+   * Index wise:
+   *
+   *
+   *              0  1  2
+   *              7     3
+   *              6  5  4
+   *
+   *   8  9 10   16 17 18   24 25 26   32 33 34
+   *  15    11   23    19   31    27   39    35
+   *  14 13 12   22 21 20   30 29 28   38 37 36
+   *
+   *             40 41 42
+   *             47    43
+   *             46 45 44
+   *
+   * Centers:
+   *
+   *    0
+   *  1 2 3 4
+   *    5
+   */
 
 enum goal{
 	cross=1,
@@ -19,104 +56,31 @@ enum goal{
 	final_layer
 };
 
-class dynamic2dArray{
-	private:
-	char* pointer;
-	int row_limit;
-	int column_limit;
-	public:
-	dynamic2dArray(int rows, int columns){
-		pointer = new char[rows*columns];
-		row_limit = rows;
-		column_limit = columns;
-	}
-	dynamic2dArray(){
-		pointer = nullptr;
-		row_limit = 0;
-		column_limit = 0;
-	}
-	~dynamic2dArray();
-	char operator()(int rows, int columns){
-		// error handle for index overflow
-		// with array[2][5] -> array[10] -> 0-9 -> array[1][4]
-		if (columns > column_limit || rows > row_limit){
-			throw std::invalid_argument("out of index, array bounds must be within the 2d array");
-		}
-		// 
-		return pointer[(rows * column_limit + columns)]; // return the derefed location of the array.
-	}
-	void operator=(dynamic2dArray* rightSide){
-		this->row_limit = rightSide->row_limit;
-		this->column_limit = rightSide->column_limit;
-		if (pointer != nullptr) delete[] pointer; // delete the array before assigning to new one.
-		this->pointer = rightSide->pointer;	
-	}
-};
-
-class Corners : public dynamic2dArray // dynamic allocation pointers
-{
-	private: 
-		// corners
-		dynamic2dArray cor;
-		// the three centers that are independent 
-	public:
-		Corners(){
-			cor = dynamic2dArray(8,3);
-		}
-		Corners(dynamic2dArray* nyeah){
-			cor = nyeah;
-		}
-		~Corners();
-		dynamic2dArray* get_Corner(){
-			return &cor;
-		}
-		void set_Corner(char* dynamic_edge);
-};
-
-class Edges : public dynamic2dArray // dynamic allocation pointers
-{
-	private:
-	// 
-		dynamic2dArray ed;// 
-	public:
-		Edges(){
-			ed = dynamic2dArray(12,2);
-		}
-		Edges(dynamic2dArray* nyeah){
-			ed = nyeah;
-		}
-	// return a char pointer
-	dynamic2dArray* get_edge(){
-		return &ed; // dereference the char pointer to array for the array. 
-	}
-	void set_Edge(char* dynamic_edge){
-
-	}
-};
-
 // inherit from the homies
-class RubixCube : public Edges, public Corners{
+class RubixCube{
 private:
-	Corners corners;
-	Edges edges;
-	dynamic2dArray centers;
+	uint64_t* faces; // 6 faces
 public: 
-	RubixCube(){
-		char* dynamic_corner = new char[8*3]; //2d arrays are just chonks of 1d arrays. m * n length;
-		char* dynamic_edge = new char[12*2]; //2d arrays are just chonks of 1d arrays. m * n length;
-		set_Corner(dynamic_corner);
-		set_Edge(dynamic_edge);
+	enum class FACE   : uint8_t {UP, LEFT, FRONT, RIGHT, BACK, DOWN};
+    enum class COLOR  : uint8_t {WHITE, GREEN, RED, BLUE, ORANGE, YELLOW};
+    enum class MOVE   : uint8_t{
+      L, LPRIME, L2,
+      R, RPRIME, R2,
+      U, UPRIME, U2,
+      D, DPRIME, D2,
+      F, FPRIME, F2,
+      B, BPRIME, B2
 	};
-	RubixCube(Corners &passed_Corner, Edges &passed_Edge){
-		edges = passed_Edge;
-		corners = passed_Corner;
+	RubixCube(){
+		faces = new u_int64_t[6];
+	};
+	RubixCube(){
+		
 	};
 	//DESTROYYYYY
 	~RubixCube(){
 		
 	};
-	Corners get_Corner();
-	Edges get_Edge();
 	
 };
 
