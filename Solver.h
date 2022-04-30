@@ -1,7 +1,6 @@
 #pragma once 
 #include "Cube.h"
 
-
 class GameState{
 private: 
 	RubixCube Cube;

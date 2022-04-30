@@ -1,7 +1,10 @@
 #include "Solver.h"
-#include "ncurses.h"
 
 int main(){
-    
+    initscr();
+    RubixCube cube;
+    cube.draw();
+    getch();
+    endwin();
     return 0;
 }

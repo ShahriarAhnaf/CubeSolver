@@ -1,21 +1,20 @@
 #include <iostream>
 #include <cmath>
 #include "Cube.h"
-#include <ncurses.h>
 
+int8_t location_center[6][2] = {{18,1},{9,5}, {18,5}, {27,5}, {36,5}, {18, 10}};
+int8_t print_relative_mapping[9][2] = {{-1,-1}, {0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}, {-1,1}, {-1,0}};
+
+void draw_face(uint8_t face_number){
+	for(int x=0; x<8;x++){
+	mvprintw(location_center[face_number][1]+ print_relative_mapping[x][1], location_center[face_number][0] + print_relative_mapping[x][0],"C");
+	}
+}
 
 void RubixCube::draw(){
-	initscr();
-
-    // moving cursor, x = 20, y = 10
-    mvprintw(10, 20, "Hello World!");
-
-    move(11, 10);
-    printw("Now i am here");
-
+    // printing each face
+    for(int n=0; n < 6; n++){draw_face(n);}
     refresh();
-    getch();
-    endwin();
 }
 
 uint64_t mask = (~0); //max

@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include <ncurses.h>
 #ifndef CUBE_H
 #define CUBE_H
 
@@ -47,7 +48,7 @@
    *  1 2 3 4
    *    5
    */
-
+// index center, x, y
 enum goal{
 	cross=1,
 	first_layer,
@@ -55,7 +56,6 @@ enum goal{
 	final_layer
 };
 
-// inherit from the homies
 class RubixCube{
 private:
 	uint64_t* faces; // 6 faces
@@ -64,7 +64,7 @@ public:
     enum class COLOR  : uint8_t {W, B, R, G, O, Y};
     enum class MOVE   : uint8_t{
       L, LPRIME, 
-	  R, RPRIME, 
+	   R, RPRIME, 
       U, UPRIME, 
       D, DPRIME, 
       F, FPRIME, 
