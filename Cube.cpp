@@ -5,9 +5,39 @@
 int8_t location_center[6][2] = {{18,1},{9,5}, {18,5}, {27,5}, {36,5}, {18, 10}};
 int8_t print_relative_mapping[9][2] = {{-1,-1}, {0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}, {-1,1}, {-1,0}};
 
-void draw_face(uint8_t face_number){
+//masks
+uint64_t mask = (~0); //max
+uint64_t mask_upper = 0xFFF00000; 
+uint64_t mask_cube = 0xF0000000;
+
+
+
+
+
+void RubixCube::draw_face(uint8_t face_number){
 	for(int x=0; x<8;x++){
-	mvprintw(location_center[face_number][1]+ print_relative_mapping[x][1], location_center[face_number][0] + print_relative_mapping[x][0],"C");
+	char pp;
+	switch(faces[face_number] & (mask_cube >> 8*x)){
+		case WHITE:
+			pp = 'w';
+			break;
+		case BLUE:
+			pp = 'b';
+			break;
+		case RED:
+			pp = 'r';
+			break;
+		case GREEN:
+			pp = 'g';
+			break;
+		case ORANGE:
+			pp = 'o';
+			break;
+		case YELLOW:
+			pp = 'y';
+			break;
+	}
+	mvprintw(location_center[face_number][1]+ print_relative_mapping[x][1], location_center[face_number][0] + print_relative_mapping[x][0],);
 	}
 }
 
@@ -17,8 +47,6 @@ void RubixCube::draw(){
     refresh();
 }
 
-uint64_t mask = (~0); //max
-uint64_t mask_upper = 0xFFF00000; 
 // moves the upper face clockwise
 
 RubixCube::RubixCube(){

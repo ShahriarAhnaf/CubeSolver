@@ -55,21 +55,24 @@ enum goal{
 	middle_layer,
 	final_layer
 };
-
-class RubixCube{
-private:
-	uint64_t* faces; // 6 faces
-public: 
-	enum class FACE   : uint8_t {UP, LEFT, FRONT, RIGHT, BACK, DOWN};
-    enum class COLOR  : uint8_t {W, B, R, G, O, Y};
-    enum class MOVE   : uint8_t{
+   
+   // enums
+enum FACE  {UP, LEFT, FRONT, RIGHT, BACK, DOWN};
+    enum COLOR {WHITE, BLUE, RED, GREEN, ORANGE, YELLOW};
+    enum MOVE{
       L, LPRIME, 
 	   R, RPRIME, 
       U, UPRIME, 
       D, DPRIME, 
       F, FPRIME, 
       B, BPRIME 	
-	};
+	}; 
+class RubixCube{
+private:
+	uint64_t* faces; // 6 faces
+   void draw_face(uint8_t face_number);
+public: 
+	
 	RubixCube();
 	RubixCube(uint64_t* passed_face){
 		faces = passed_face;
