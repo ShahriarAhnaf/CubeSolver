@@ -1,58 +1,25 @@
- PLANNIGN GAME
+each face of the cube is made up of 9 stickers, but the center is stationary so only 8 need to be stored. And there are 6 colors, so each color fits in a byte. Given these color definitions:
 
-The computer looks at the cube using a subjective top view for each face.
-use the .obj 3d model for reference!
+enum class COLOR : uchar {WHITE, GREEN, RED, BLUE, ORANGE, YELLOW};
+A face might look like this, stored in a single 64-bit integer:
 
-faces
+00000000 00000001 00000010 00000011 00000100 00000101 00000000 00000001
+Which is decoded as:
 
-front
-1 1E 2    
-4E   2E
-4 3E 3  
+WGR
+G B
+WYO
+An advantage of using this structure is that the rolq and rorq bit-wise operators can be used to move a face. Rolling by 16 bits effects a 90-degree rotation; rolling by 32 bits gives a 180-degree turn. The adjacent pieces need to be up-kept manually--i.e. after rotating the top face, the top layer of the front, left, back, and right faces need to be moved, too. Turning faces in this manner is really fast. For example, rolling
 
-RIGHT 
-2 8E 5 
-2E   9E
-3 7E 8  
+00000000 00000001 00000010 00000011 00000100 00000101 00000000 00000001
+by 16 bits yields
 
-LEFT
-6 5E 1 
-11E   4E
-7 6E 4  
+00000000 00000001 00000000 00000001 00000010 00000011 00000100 00000101
+Decoded, that looks like this:
 
-Top 
-6 12E  5 
-5E  8E
-1 1E 2  
+WGW
+Y G
+OBR
 
-Bottom
-1 10E 6 
-7E C 6E
-4 3E 7  
+A 64 bit numbers for each face will be defined 
 
-BACK
-5 12E 6 
-9E C 11E
-8 10E 7  
-
-HOW TO TELL THE CENTER CONNECTION???
-- a 6 by 8 dynamic array that holds the connection of each thing to the center.
-
-use the corner and edges approach to side step over counting problems
-
-    class for dynamic array
-            |
-    class for edges and corners()
-            |
-            |
-    class for cube()
-            |
-            |
-     class for game state{
-         cube and functions to search for next move 
-    }  
- go smaller goals using the fridrich method! cross, first layer, middle layer, then pattern matching. 
-
-
- start with full cube, person messes it up using keys, tehn solves.
- 

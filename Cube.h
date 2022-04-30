@@ -1,5 +1,4 @@
 #pragma once
-#include "Solver.h"
 #include <stdint.h>
 #ifndef CUBE_H
 #define CUBE_H
@@ -19,9 +18,9 @@
    *          W W W
    *          W W W
    *
-   *  G G G   R R R   B B B   O O O
-   *  G G G   R R R   B B B   O O O
-   *  G G G   R R R   B B B   O O O
+   *  B B B   R R R   G G G   O O O
+   *  B B B   R R R   G G G   O O O
+   *  B B B   R R R   G G G   O O O
    *
    *          Y Y Y
    *          Y Y Y
@@ -62,37 +61,37 @@ private:
 	uint64_t* faces; // 6 faces
 public: 
 	enum class FACE   : uint8_t {UP, LEFT, FRONT, RIGHT, BACK, DOWN};
-    enum class COLOR  : uint8_t {WHITE, GREEN, RED, BLUE, ORANGE, YELLOW};
+    enum class COLOR  : uint8_t {W, B, R, G, O, Y};
     enum class MOVE   : uint8_t{
-      L, LPRIME, L2,
-      R, RPRIME, R2,
-      U, UPRIME, U2,
-      D, DPRIME, D2,
-      F, FPRIME, F2,
-      B, BPRIME, B2
+      L, LPRIME, 
+	  R, RPRIME, 
+      U, UPRIME, 
+      D, DPRIME, 
+      F, FPRIME, 
+      B, BPRIME 	
 	};
-	RubixCube(){
-		faces = new u_int64_t[6];
-	};
-	RubixCube(){
-		
+	RubixCube();
+	RubixCube(uint64_t* passed_face){
+		faces = passed_face;
 	};
 	//DESTROYYYYY
 	~RubixCube(){
 		
 	};
 	
+void draw();
+void U(uint64_t num_of_turns);
+void D(uint64_t num_of_turns);
+void F(uint64_t num_of_turns);
+void R(uint64_t num_of_turns);
+void L(uint64_t num_of_turns);
+void B(uint64_t num_of_turns);
+void U_PRIME(uint64_t num_of_turns);
+void D_PRIME(uint64_t num_of_turns);
+void F_PRIME(uint64_t num_of_turns);
+void R_PRIME(uint64_t num_of_turns);
+void L_PRIME(uint64_t num_of_turns);
+void B_PRIME(uint64_t num_of_turns);
 };
 
-
-
-
-class GameState{
-private: 
-	RubixCube Cube;
-	bool closer;
-public: 
-	GameState();
-	~GameState();
-};
 #endif
