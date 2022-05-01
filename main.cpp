@@ -12,6 +12,10 @@ int main(){
                 cube.U(1);
                 mvprintw(20,20,"bruh");
                 break;
+            case 'U':
+                cube.U_PRIME(1);
+                mvprintw(20,20,"newbruh");
+                break;
             case 'f':
                 cube.F(1);
                 mvprintw(20,20,"unbruh");

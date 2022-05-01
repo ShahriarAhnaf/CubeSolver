@@ -28,4 +28,6 @@ A 64 bit numbers for each face will be defined
 
 shifting for the moves
 IF THE TURN IS 1
-the mask needs to be shifted 48 times so that only the last 16 bits are stored temporarily.
+- 24 bits need to be stored and copied to the next one. 
+- ORDER MATTERS BE VERY CAREFEE
+
