@@ -1,11 +1,11 @@
 #include "Solver.h"
 
 int main(){
-    //initscr();
+    initscr();
     RubixCube cube;
     cube.draw();
-    //refresh();
+    refresh();
     getch();
-    //endwin();
+    endwin();
     return 0;
 }
