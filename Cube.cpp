@@ -111,10 +111,8 @@ void RubixCube::U(uint64_t num_of_turns){
 	//print_bytes(faces[0], 90,21);
 	// other consequences 
 
-
 	uint64_t anti_mask = ~mask_upper;
 
-	
 	// face 1
 	temp = faces[1];
 	//to find the othes bydet op of the face and preserve them
@@ -143,7 +141,46 @@ void RubixCube::F(uint64_t num_of_turns){}
 void RubixCube::R(uint64_t num_of_turns){}
 void RubixCube::L(uint64_t num_of_turns){}
 void RubixCube::B(uint64_t num_of_turns){}
-void RubixCube::U_PRIME(uint64_t num_of_turns){}
+void RubixCube::U_PRIME(uint64_t num_of_turns){
+	// face itself
+	// mask the end bits so that they can wrap around
+	int mask_shift = 64-16*num_of_turns;
+	uint64_t temp = faces[0] & (mask >> mask_shift);
+	//print_bytes(temp, 80,22);
+	//print_bytes(faces[0], 80,20);
+	faces[0] >>= 16*num_of_turns;
+	//moves the bits back all the way to the left.
+	temp <<= mask_shift;
+	//print_bytes(temp, 80,24);
+	faces[0] |= temp;
+	//print_bytes(faces[0], 90,21);
+	// other consequences 
+
+	uint64_t anti_mask = ~mask_upper;
+
+	// face 1
+	temp = faces[1];
+	//to find the othes bydet op of the face and preserve them
+	faces[1] &= anti_mask; // get rid of the upper layer in the face
+	faces[1] |= ((faces[2] & mask_upper));
+	
+	// front face affected
+	// face 2
+	//print_bytes(anti_mask, 40,40);
+	faces[2] &= anti_mask; // get rid of the upper layer in the face
+	faces[2] |= ((faces[3] & mask_upper));
+	//print_bytes(faces[2], 90, 30);
+	// face 3
+	//to find the othes bydet op of the face and preserve them
+
+	faces[3] &= anti_mask; // get rid of the upper layer in the face
+	faces[3] |= ((faces[4] & mask_upper));
+
+	//to find the othes bydet op of the face and preserve them
+	faces[4] &= anti_mask; // get rid of the upper layer in the face
+	faces[4] |= ((temp & mask_upper));
+
+}
 void RubixCube::D_PRIME(uint64_t num_of_turns){}
 void RubixCube::F_PRIME(uint64_t num_of_turns){}
 void RubixCube::R_PRIME(uint64_t num_of_turns){}
