@@ -5,4 +5,5 @@ Using Rubix Cube notation implementation
 
 v1 : using manual input from the user, movement map txt file for organization
 
-v2 : OOP cube and game state implementation
+v2 : OOP cube and game state implementation,
+- using a bit wise operation based solving system for maximum solving speed

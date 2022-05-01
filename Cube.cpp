@@ -7,10 +7,10 @@ int8_t print_relative_mapping[9][2] = {{-1,-1}, {0,-1}, {1,-1}, {1,0}, {1,1}, {0
 
 //masks
 uint64_t mask = (~0); //max
-uint64_t mask_upper = 0xFFFFFF000000000; 
-uint64_t mask_cube = 0xFF00000000000000;
+uint64_t mask_upper = 0xFFFFFF0000000000; 
+uint64_t mask_cube  = 0xFF00000000000000;
 
-void print_bytes(uint64_t n){
+void print_bytes(uint64_t n, int location, int location_y){
 	int a[64],i;
 	for(i=0; n>0; i++)    
 	{    
@@ -19,9 +19,14 @@ void print_bytes(uint64_t n){
 	}        
 	for(i=i-1 ;i>=0 ;i--)    
 	{    
-		std::cout<<a[i];    
-	}  
-	std::cout << std::endl;
+		move(location_y, location-i);
+		if(a[i]){
+		printw("1");    
+		}
+		else{
+		printw("0");
+		}
+	}
 }
 void RubixCube::draw_face(uint8_t face_number){
 	for(int x=0; x<8;x++) {
@@ -77,7 +82,7 @@ void RubixCube::draw(){
 
 RubixCube::RubixCube(){
 	faces = new u_int64_t[6]{};
-    faces[0] = 0x0;
+    faces[0] = 0x05;
 	faces[1] = 0x0101010101010101;
 	faces[2] = 0x0202020202020202;
 	faces[3] = 0x0303030303030303;
@@ -88,16 +93,28 @@ RubixCube::RubixCube(){
 
 void RubixCube::U(uint64_t num_of_turns){
 	// face itself
-	uint64_t temp = faces[0] & (mask >> (16*num_of_turns));
+	// mask the end bits so that they can wrap around
+	int mask_shift = 64-16*num_of_turns;
+	uint64_t temp = faces[0] & (mask >> mask_shift);
+	//print_bytes(temp, 80,22);
+	//print_bytes(faces[0], 80,20);
 	faces[0] >>= 16*num_of_turns;
-	temp <<= 64-16*num_of_turns;
-	faces[0] &= temp;
-
+	//moves the bits back all the way to the left.
+	temp <<= mask_shift;
+	//print_bytes(temp, 80,24);
+	faces[0] |= temp;
+	//print_bytes(faces[0], 90,21);
 	// other consequences 
 	// front face affected
 	temp = faces[2];
 	// l
-	faces[2] &= ((faces[3] & mask_upper) | 0x000FFFFF); 
+	
+	//print_bytes(faces[2], 90, 20);
+	//to find the othes bydet op of the face and preserve them
+	uint64_t other_mask = mask >> (56-24);
+	//print_bytes(other_mask, 40,40);
+	faces[2] |= ((faces[3] & mask_upper) | other_mask );
+	//print_bytes(faces[2], 90, 30);
 }
 void RubixCube::D(uint64_t num_of_turns){}
 void RubixCube::F(uint64_t num_of_turns){}
