@@ -71,6 +71,7 @@ class RubixCube{
 private:
 	uint64_t* faces; // 6 faces
    void draw_face(uint8_t face_number);
+   void shift_upper_();
 public: 
 	
 	RubixCube();
