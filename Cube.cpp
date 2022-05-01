@@ -6,10 +6,15 @@ int8_t location_center[6][2] = {{18,1},{9,5}, {18,5}, {27,5}, {36,5}, {18, 10}};
 int8_t print_relative_mapping[9][2] = {{-1,-1}, {0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}, {-1,1}, {-1,0}};
 
 //masks
-uint64_t mask = (~0); //max
-uint64_t mask_upper = 0xFFFFFF0000000000; 
-uint64_t mask_cube  = 0xFF00000000000000;
-
+uint64_t mask = (~0); //max 64 uint
+// 				MASKS
+//                       0 1 2 3 4 5 6 7
+uint64_t mask_upper  = 0xFFFFFF0000000000; // 0,1,2
+uint64_t mask_right  = 0x0000FFFFFF000000; // 2,3,4
+uint64_t mask_left   = 0xFF0000000000FFFF; // 0,7,6
+uint64_t mask_lower  = 0x00000000FFFFFF00; // 6,5,4
+uint64_t mask_cube   = 0xFF00000000000000;
+// helpers
 void print_bytes(uint64_t n, int location, int location_y){
 	int a[64],i;
 	for(i=0; n>0; i++)    
@@ -105,16 +110,38 @@ void RubixCube::U(uint64_t num_of_turns){
 	faces[0] |= temp;
 	//print_bytes(faces[0], 90,21);
 	// other consequences 
+
+
+	
+	// face 1
+	temp = faces[1];
+	//to find the othes bydet op of the face and preserve them
+	uint64_t other_mask = mask >> (56-24);
+	faces[1] |= ((faces[2] & mask_upper) | other_mask );
+	
 	// front face affected
 	temp = faces[2];
-	// l
-	
+	// face 2
 	//print_bytes(faces[2], 90, 20);
 	//to find the othes bydet op of the face and preserve them
 	uint64_t other_mask = mask >> (56-24);
 	//print_bytes(other_mask, 40,40);
 	faces[2] |= ((faces[3] & mask_upper) | other_mask );
 	//print_bytes(faces[2], 90, 30);
+
+	// face 3
+	temp = faces[3];
+	//to find the othes bydet op of the face and preserve them
+	uint64_t other_mask = mask >> (56-24);
+	faces[3] |= ((faces[4] & mask_upper) | other_mask );
+
+	
+	// face 4
+	temp = faces[4];
+	//to find the othes bydet op of the face and preserve them
+	uint64_t other_mask = mask >> (56-24);
+	faces[4] |= ((faces[1] & mask_upper) | other_mask );
+
 }
 void RubixCube::D(uint64_t num_of_turns){}
 void RubixCube::F(uint64_t num_of_turns){}
