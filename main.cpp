@@ -10,22 +10,29 @@ int main(){
         switch(getch()){
             case 'u':
                 cube.U(1);
-                mvprintw(20,20,"bruh");
                 break;
             case 'U':
                 cube.U_PRIME(1);
-                mvprintw(20,20,"newbruh");
                 break;
             case 'f':
                 cube.F(1);
-                mvprintw(20,20,"unbruh");
                 break;
+            case 'l':
+                cube.L(1);
+                break;
+            case 'r':
+                cube.R(1);
+                break;
+            case 'b':
+                cube.B(1);
+                break;
+            case 'd':
+                cube.D(1);
+                break;    
             case 'q':
                 quit = true;
                 break;
         }
-
-        cube.draw();
     }
 
     endwin();

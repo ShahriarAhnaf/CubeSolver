@@ -30,4 +30,10 @@ shifting for the moves
 IF THE TURN IS 1
 - 24 bits need to be stored and copied to the next one. 
 - ORDER MATTERS BE VERY CAREFEE
+- use the correct mask
+- set the anti mask for each switch
+- shift around the face using th esame algo
+
+USING MASK LEFT NEEDS TO BE WITH CAUTION
+WRAPS AROUND!!
 
