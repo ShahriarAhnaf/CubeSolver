@@ -17,13 +17,16 @@ uint64_t mask_cube   = 0xFF00000000000000;
 
 // WEARY OF MASK LEFT!!! IT WRAPS AROUND
 
-
-int mask_left_to_lower = -16;
-int mask_lower_to_right = 16;
+int mask_lower_to_upper = 32;
+int mask_right_to_lower = 16;
 int mask_right_to_upper = -16;
 int mask_upper_to_right = 16;
 
-
+uint64_t make_left_into_masked_lower(uint64_t masked_left){
+	uint64_t temp = masked_left & mask_cube;
+	masked_left <<= 8;
+	return (masked_left | (temp >> 56)) << 8;
+}
 // helpers
 void print_bytes(uint64_t n, int location, int location_y){
 	int a[64],i;
@@ -184,12 +187,12 @@ void RubixCube::D(uint64_t num_of_turns){
 }
 void RubixCube::F(uint64_t num_of_turns){
 	int mask_shift = 64-16*num_of_turns;
-	uint64_t temp = faces[2] & (mask << mask_shift);
+	uint64_t temp = faces[2] & (mask >> mask_shift);
 	//print_bytes(temp, 80,22);
 	//print_bytes(faces[0], 80,20);
-	faces[2] <<= 16*num_of_turns;
+	faces[2] >>= 16*num_of_turns;
 	//moves the bits back all the way to the left.
-	temp >>= mask_shift;
+	temp <<= mask_shift;
 	//print_bytes(temp, 80,24);
 	faces[2] |= temp;
 	//print_bytes(faces[0], 90,21);
@@ -198,21 +201,26 @@ void RubixCube::F(uint64_t num_of_turns){
 	uint64_t anti_mask;
 
 	// face 1
-	temp = faces[1];
+	temp = faces[0];
 	// anti mask is determined by the destination of cubes
 	anti_mask = ~mask_lower;
 //to find the othes bydet op of the face and preserve them
 	faces[0] &= anti_mask; // get rid of the lower layer in the face
-	faces[0] |= ((faces[1] & mask_right) >> mask);
+	faces[0] |= ((faces[1] & mask_right) >> mask_right_to_lower); // from right to lower
 
-	faces[3] &= anti_mask; // get rid of the upper layer in the face
-	faces[3] |= ((faces[2] & mask_upper));
+	anti_mask = ~mask_right; // set to rid of the right layer
+	faces[1] &= anti_mask; // get rid of the upper layer in the face
+	faces[1] |= ((faces[5] & mask_upper) >> mask_upper_to_right); //upper face to right face
 
+	anti_mask = ~mask_upper;
+	faces[5] &= anti_mask; // get rid of the upper layer in the face
+	faces[5] |= (make_left_into_masked_lower(faces[3] & mask_left) << mask_lower_to_upper); // lower to upper
+
+	anti_mask = ~mask_left;
 	faces[2] &= anti_mask; // get rid of the upper layer in the face
 	faces[2] |= ((faces[1] & mask_upper));
 	//to find the othes bydet op of the face and preserve them
-	faces[1] &= anti_mask; // get rid of the upper layer in the face
-	faces[1] |= ((temp & mask_upper));
+	
 }
 void RubixCube::R(uint64_t num_of_turns){}
 void RubixCube::L(uint64_t num_of_turns){}
