@@ -3,7 +3,7 @@
 #include "Cube.h"
 
 int8_t location_center[6][2] = {{18,1},{9,5}, {18,5}, {27,5}, {36,5}, {18, 10}};
-int8_t print_relative_mapping[9][2] = {{-1,-1}, {0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}, {-1,1}, {-1,0}};
+int8_t print_relative_mapping[9][2] = {{-1,-1}, {0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}, {-1,1}, {-1,0}}; // location of the letter form the center, {x,y}
 
 //masks
 uint64_t mask = (~0); //max 64 uint
@@ -223,7 +223,7 @@ void RubixCube::F(uint64_t num_of_turns){
 	temp = faces[0];
 	// anti mask is determined by the destination of cubes
 	anti_mask = ~mask_lower;
-//to find the othes bydet op of the face and preserve them
+//to find the othes bytes  top of the face and preserve them
 	faces[0] &= anti_mask; // get rid of the lower layer in the face
 	faces[0] |= (mirror_order_cubes((faces[1] & mask_right)) >> mask_right_to_lower); // from right to lower
 
