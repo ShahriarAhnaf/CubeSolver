@@ -3,7 +3,14 @@ A program that will be able to solve a random rubix cube
 
 Using Rubix Cube notation implementation
 
-v1 : using manual input from the user, movement map txt file for organization
+## Project revamped after a long hiatus! 
+- going to be cleaning up first and understanding project
+- 
 
-v2 : OOP cube and game state implementation,
-- using a bit wise operation based solving system for maximum solving speed
+## How to run and build 
+```make ```
+
+## Future Improvements
+- Add graphical engine using Metal/OpenGL
+- Generalize to bigger cubes?
+- Implement machine learning for a trained algorithm 

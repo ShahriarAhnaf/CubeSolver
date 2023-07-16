@@ -58,8 +58,8 @@ enum goal{
    
    // enums
 enum FACE  {UP, LEFT, FRONT, RIGHT, BACK, DOWN};
-    enum COLOR {WHITE, BLUE, RED, GREEN, ORANGE, YELLOW};
-    enum MOVE{
+enum COLOR {WHITE, BLUE, RED, GREEN, ORANGE, YELLOW};
+enum MOVE{
       L, LPRIME, 
 	   R, RPRIME, 
       U, UPRIME, 
@@ -74,7 +74,7 @@ private:
    void shift_upper_();
 public: 
 	
-	RubixCube();
+	RubixCube(); // never a random cube creation.
 	RubixCube(uint64_t* passed_face){
 		faces = passed_face;
 	};
