@@ -32,17 +32,14 @@ OBR
 
 A 64 bit numbers for each face will be defined 
 
-
-
-
 shifting for the moves
-IF THE TURN IS 1
+IF THE TURN IS 1#
 - 24 bits need to be stored and copied to the next one. 
 - ORDER MATTERS BE VERY CAREFEE
-- use the correct mask
-- set the anti mask for each switch
+- use the correct mask(what values to save and rotate around)
+- set the anti mask for each switch(what values to discard)
 - shift around the face using th esame algo
 
-USING MASK LEFT NEEDS TO BE WITH CAUTION
+*USING MASK LEFT NEEDS TO BE WITH CAUTION*
 WRAPS AROUND!!
 
