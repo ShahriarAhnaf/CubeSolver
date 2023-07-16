@@ -23,11 +23,20 @@ int main(){
             case 'l':
                 cube.L(1);
                 break;
+            case 'L':
+                cube.L_PRIME(1);
+                break;
             case 'r':
                 cube.R(1);
                 break;
+            case 'R':
+                cube.R_PRIME(1);
+                break;
             case 'b':
                 cube.B(1);
+                break;
+            case 'B':
+                cube.B_PRIME(1);
                 break;
             case 'd':
                 cube.D(1);
