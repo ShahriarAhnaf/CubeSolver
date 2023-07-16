@@ -93,12 +93,12 @@ void RubixCube::draw(){
 // random gen
 RubixCube::RubixCube(){
 	faces = new u_int64_t[6]{};
-    faces[0] = 0x05050500000000; // 0x0
+    faces[0] = 0x00; // 0x0
 	faces[1] = 0x0101010102010101; //0x0101010101010101
 	faces[2] = 0x0202020303020202; //0x0202020202020202 
 	faces[3] = 0x0303030304030505; //0x0303030303030303 
-	faces[4] = 0x0404040405000004; //0x0404040404040404 
-	faces[5] = 0x0505000500050505; //0x0505050505050505
+	faces[4] = 0x0404040404040404; //0x0404040404040404 
+	faces[5] = 0x0505040505050505; //0x0505050505050505
 }
 
 //clockwise turn
@@ -300,7 +300,47 @@ void RubixCube::L(uint64_t num_of_turns){
 	}
 }
 // Face 4 is the view point of the turn
-void RubixCube::B(uint64_t num_of_turns){}
+void RubixCube::B(uint64_t num_of_turns){
+	for(int turns = 0; turns < num_of_turns; turns++){
+		//face turn
+		faces[4] = generic_turn(faces[4]);
+		
+		// consequences of face turn
+		//what bits to yeet
+		uint64_t anti_mask;
+
+		//save face 0
+		uint64_t temp = faces[0];
+		// anti mask is determined by the destination of cubes
+		anti_mask = ~mask_upper;
+		//to find the othes bytes  top of the face and preserve them
+		
+		//face 0
+		faces[0] &= anti_mask; // get rid of the layer in the face
+		// right of 3 to upper 0
+		faces[0] |= generic_turn_prime(faces[3] & mask_right); // right to upper 
+
+		//face 3
+		anti_mask = ~mask_right; // set to rid of the right layer
+		faces[3] &= anti_mask; // get rid of the layer in the face
+		// double rotation
+		//lower of 5 to right of 3
+		faces[3] |= generic_turn_prime(faces[5] & mask_lower); 
+
+		//face 5
+		anti_mask = ~mask_lower;
+		faces[5] &= anti_mask; // get rid of the upper layer in the face
+		//double rotation
+		// left of 1 to lower of 5
+		faces[5] |= generic_turn_prime(faces[1] & mask_left); 
+
+		//with temp
+		anti_mask = ~mask_left;
+		faces[1] &= anti_mask; // get rid of the upper layer in the face
+		//upper to left
+		faces[1] |= generic_turn_prime(temp & mask_upper); // from the first saved temp face
+	}
+}
 void RubixCube::U_PRIME(uint64_t num_of_turns){
 	// face itself
 	// mask the first bits so that they can wrap around
@@ -434,6 +474,84 @@ void RubixCube::R_PRIME(uint64_t num_of_turns){
 		faces[5] |= (temp & mask_right); // from the first saved temp face
 	}
 }
-void RubixCube::L_PRIME(uint64_t num_of_turns){}
-void RubixCube::B_PRIME(uint64_t num_of_turns){}
+void RubixCube::L_PRIME(uint64_t num_of_turns){
+	for(int turns = 0; turns < num_of_turns; turns++){
+		//face turn
+		faces[1] = generic_turn_prime(faces[1]);
+		
+		// consequences of face turn
+		//what bits to yeet
+		uint64_t anti_mask;
+
+		//save face 2
+		uint64_t temp = faces[2];
+		// anti mask is determined by the destination of cubes
+		anti_mask = ~mask_left;
+		//to find the othes bytes  top of the face and preserve them
+		
+		//face 2
+		faces[2] &= anti_mask; // get rid of the lower layer in the face
+		faces[2] |= faces[5] & mask_left; 
+
+		//face 5
+		anti_mask = ~mask_left; // set to rid of the right layer
+		faces[5] &= anti_mask; // get rid of the upper layer in the face
+		// double rotation
+		//right of 4 to left of 5
+		faces[5] |= generic_turn(generic_turn(faces[4] & mask_right)); // from right to left
+
+		//face 4
+		anti_mask = ~mask_right;
+		faces[4] &= anti_mask; // get rid of the upper layer in the face
+		//double rotation
+		// left of 0 goes to right of 4
+		faces[4] |= generic_turn(generic_turn(faces[0] & mask_left)); // from right to left 
+
+		//face 0 with temp
+		anti_mask = ~mask_left;
+		faces[0] &= anti_mask; // get rid of the upper layer in the face
+		faces[0] |= (temp & mask_left); // from the first saved temp face
+	}
+}
+void RubixCube::B_PRIME(uint64_t num_of_turns){
+	for(int turns = 0; turns < num_of_turns; turns++){
+		//face turn
+		faces[4] = generic_turn_prime(faces[4]);
+		
+		// consequences of face turn
+		//what bits to yeet
+		uint64_t anti_mask;
+
+		//save face 0
+		uint64_t temp = faces[0];
+		// anti mask is determined by the destination of cubes
+		anti_mask = ~mask_upper;
+		//to find the othes bytes  top of the face and preserve them
+		
+		//face 0
+		faces[0] &= anti_mask; // get rid of the layer in the face
+		// left 1 to upper 0
+		faces[0] |= generic_turn(faces[1] & mask_left); // right to upper 
+
+		//face 1
+		anti_mask = ~mask_left; // set to rid of the right layer
+		faces[1] &= anti_mask; // get rid of the layer in the face
+		// double rotation
+		//lower of 5 to left of 1
+		faces[1] |= generic_turn(faces[5] & mask_lower); 
+
+		//face 5
+		anti_mask = ~mask_lower;
+		faces[5] &= anti_mask; // get rid of the upper layer in the face
+		//double rotation
+		// right of 3 to lower of 5
+		faces[5] |= generic_turn(faces[3] & mask_right); 
+
+		//with temp
+		anti_mask = ~mask_right;
+		faces[3] &= anti_mask; // get rid of the upper layer in the face
+		//upper to right
+		faces[3] |= generic_turn(temp & mask_upper); // from the first saved temp face
+	}
+}
 
