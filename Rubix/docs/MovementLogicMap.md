@@ -43,3 +43,7 @@ IF THE TURN IS 1#
 *USING MASK LEFT NEEDS TO BE WITH CAUTION*
 WRAPS AROUND!!
 
+
+## rotation logic
+- uses masks(things to save) and anti-masks(the thigns  to get rid or to move)
+- generic turn and turn prime function for in face rotation.
