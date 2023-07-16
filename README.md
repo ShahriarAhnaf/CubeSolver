@@ -8,7 +8,11 @@ Using Rubix Cube notation implementation
 - 
 
 ## How to run and build 
-```make ```
+```
+    cd Rubix 
+    make run 
+```
+- uses rubix cube algorithm notation such as U,F,D,B etc. lowercase of the letter is the normal move, while upper case is prime i.e F is F prime and f is normal f.
 
 ## Future Improvements
 - Add graphical engine using Metal/OpenGL

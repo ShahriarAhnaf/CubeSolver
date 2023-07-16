@@ -15,7 +15,7 @@ uint64_t mask_right  = 0x0000FFFFFF000000; // index 2,3,4
 uint64_t mask_left   = 0xFF0000000000FFFF; // index 0,7,6
 uint64_t mask_lower  = 0x00000000FFFFFF00; // index 6,5,4
 uint64_t mask_cube   = 0xFF00000000000000;
-const uint64_t single_mask = (1UL << 63);
+
 // WEARY OF MASK LEFT!!! IT WRAPS AROUND
 
 int mask_lower_to_upper = 32;
@@ -29,8 +29,8 @@ uint64_t make_left_into_masked_lower(uint64_t masked_left){
 	return (masked_left | (temp >> 56)) << 8;
 }
 // the bits must be given in 0xFFFFFF form
-uint64_t make_masked_left(uint64_t masked_bits){
-	uint64_t temp = masked_bits & 0xFF; // gets last bits
+uint64_t make_lower_into_masked_left(uint64_t masked_bits){
+	uint64_t temp = masked_bits & mask_cube; // gets last bits
 	masked_bits >>= 8; // shift over the bits for the left
 	temp <<= 56; // move the bits to the index of 0
 	return masked_bits | temp;
@@ -114,17 +114,17 @@ RubixCube::RubixCube(){
 
 //clockwise turn
 // pass by reference
-void generic_turn(uint64_t &face){
+uint64_t generic_turn(uint64_t face){
 	int mask_shift = 64-16;
 	uint64_t temp = face & (mask >> mask_shift);
 	face >>= 16;
 	//moves the bits back all the way to the left.
 	temp <<= mask_shift;
 
-	face |= temp; // put back the back bits
+	return face | temp; // put back the back bits
 }
 // counter clockwise turn
-void generic_turn_prime(uint64_t &face){
+uint64_t generic_turn_prime(uint64_t face){
 	// face itself
 	// mask the first bits so that they can wrap around
 	int mask_shift = 64-16;
@@ -132,11 +132,11 @@ void generic_turn_prime(uint64_t &face){
 	face <<= 16;
 	//moves the bits back all the way to the left.
 	temp >>= mask_shift;
-	face |= temp;
+	return face | temp;
 }
 void RubixCube::U(uint64_t num_of_turns){
 	// face itself
-	generic_turn(faces[0]);
+	faces[0] = generic_turn(faces[0]);
 	
 	// all other consequences
 	// gettin all the bytes that shoudl not be affected
@@ -205,29 +205,19 @@ void RubixCube::D(uint64_t num_of_turns){
 // Face 2 is the view point of the turn
 void RubixCube::F(uint64_t num_of_turns){
 	for(int turns = 0; turns < num_of_turns; turns++){
-		int mask_shift = 64-16;
-		uint64_t temp = faces[2] & (mask >> mask_shift);
-		//print_bytes(temp, 80,22);
-		//print_bytes(faces[0], 80,20);
-		faces[2] >>= 16;
-		//moves the bits back all the way to the left.
-		temp <<= mask_shift;
-		//print_bytes(temp, 80,24);
-		faces[2] |= temp;
-		//print_bytes(faces[0], 90,21);
+		faces[2] = generic_turn(faces[2]);
 		// other consequences 
-
+		//what bits to yeet
 		uint64_t anti_mask;
 
 		// face 1
-		temp = faces[0];
+		uint64_t temp = faces[0];
 		// anti mask is determined by the destination of cubes
 		anti_mask = ~mask_lower;
 		//to find the othes bytes  top of the face and preserve them
 		faces[0] &= anti_mask; // get rid of the lower layer in the face
 		faces[0] |= (faces[1] & mask_right) >> mask_right_to_lower; // from right to lower
-		mvprintw(0,100," face 1 = %llx \n",faces[1]);
-		// print_bytes(faces[1], 80,100);
+
 		anti_mask = ~mask_right; // set to rid of the right layer
 		faces[1] &= anti_mask; // get rid of the upper layer in the face
 		faces[1] |= ((faces[5] & mask_upper) >> mask_upper_to_right); //upper face to right face
@@ -238,7 +228,8 @@ void RubixCube::F(uint64_t num_of_turns){
 
 		anti_mask = ~mask_left;
 		faces[3] &= anti_mask; // get rid of the upper layer in the face
-		faces[3] |= (make_masked_left(temp & mask_lower)); // get the first saved face into the face
+		// uses a generic turn to turn lower into left.
+		faces[3] |= (generic_turn(temp & mask_lower)); // from the first saved temp face
 		//to find the othes bydet op of the face and preserve them
 	}
 }
