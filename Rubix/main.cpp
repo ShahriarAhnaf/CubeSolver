@@ -17,6 +17,9 @@ int main(){
             case 'f':
                 cube.F(1);
                 break;
+            case 'F':
+                cube.F_PRIME(1);
+                break;
             case 'l':
                 cube.L(1);
                 break;
@@ -28,6 +31,9 @@ int main(){
                 break;
             case 'd':
                 cube.D(1);
+                break;  
+            case 'D':
+                cube.D_PRIME(1);
                 break;    
             case 'q':
                 quit = true;
