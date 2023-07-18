@@ -43,7 +43,9 @@ int main(){
                 break;  
             case 'D':
                 cube.D_PRIME(1);
-                break;    
+                break; 
+            case 's':
+                // solve on current cube   
             case 'q':
                 quit = true;
                 break;

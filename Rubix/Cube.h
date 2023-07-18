@@ -49,12 +49,7 @@
    *    5
    */
 // index center, x, y
-enum goal{
-	cross=1,
-	first_layer,
-	middle_layer,
-	final_layer
-};
+
    
    // enums
 enum FACE  {UP, LEFT, FRONT, RIGHT, BACK, DOWN};
@@ -71,10 +66,11 @@ class RubixCube{
 private:
 	uint64_t* faces; // 6 faces
    void draw_face(uint8_t face_number);
-   void shift_upper_();
 public: 
-	
-	RubixCube(); // never a random cube creation.
+	bool operator== (const RubixCube& cube1){
+      return cube1.faces == faces;
+   }
+	RubixCube(); // a solved cube.
 	RubixCube(uint64_t* passed_face){
 		faces = passed_face;
 	};
