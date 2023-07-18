@@ -3,6 +3,7 @@
 int main(){
 
     RubixCube cube;
+    Solver leSolver;
     bool quit = false;
     initscr();
     while(!quit){
@@ -45,7 +46,10 @@ int main(){
                 cube.D_PRIME(1);
                 break; 
             case 's':
-                // solve on current cube   
+                // solve on current cube
+                // Solver leSolver = Solver(cube); 
+                leSolver.Solve_Cube(cube);
+                break;
             case 'q':
                 quit = true;
                 break;

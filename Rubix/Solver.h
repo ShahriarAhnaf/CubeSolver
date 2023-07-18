@@ -24,14 +24,24 @@ private:
       "F","FPRIME", "F2",
       "B", "BPRIME", "B2"
 	}; 
+	std::string Solve_DFS(RubixCube current_cube, std::string Moves, int depth_limit);
+	std::string Solve_IDFS();
+	
 public: 
-	Solver();
+	//copy for now, might be useful to pass by ref?
+	Solver(){}
+	Solver(RubixCube cube){
+		Cube = cube;
+	}
 	~Solver();
 	bool is_Solved(RubixCube cube){
 		return cube == RubixCube(); // matching a solved cube
 	}
+	void Solve_Cube(RubixCube given_cube){
+		Cube = given_cube;
+		mvprintw(0,0, Solve_DFS(Cube, "", 3).c_str());
+	}
 	void visualize_state();
-	std::string Solve_DFS(RubixCube current_cube, std::string Moves, int depth_limit);
-	std::string Solve_IDFS();
-	RubixCube Apply_Moves(RubixCube El_Cube, char* leMoves);
+	void scramble();
+	RubixCube Apply_Moves(RubixCube El_Cube, std::string leMoves);
 };
