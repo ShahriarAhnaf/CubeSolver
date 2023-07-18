@@ -54,14 +54,7 @@
    // enums
 enum FACE  {UP, LEFT, FRONT, RIGHT, BACK, DOWN};
 enum COLOR {WHITE, BLUE, RED, GREEN, ORANGE, YELLOW};
-enum MOVE{
-      L, LPRIME, 
-	   R, RPRIME, 
-      U, UPRIME, 
-      D, DPRIME, 
-      F, FPRIME, 
-      B, BPRIME 	
-	}; 
+
 class RubixCube{
 private:
 	uint64_t* faces; // 6 faces
