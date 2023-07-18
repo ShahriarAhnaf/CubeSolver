@@ -1,5 +1,6 @@
 #pragma once 
 #include <string>
+#include <vector>
 #include "Cube.h"
 
 
@@ -15,7 +16,14 @@ enum {
 class Solver{
 private: 
 	RubixCube Cube;
-
+	std::string Moveset[18] = {
+      "L", "LPRIME", "L2",
+	  "R", "RPRIME", "R2",
+      "U", "UPRIME", "U2",
+      "D", "DPRIME", "D2",
+      "F","FPRIME", "F2",
+      "B", "BPRIME", "B2"
+	}; 
 public: 
 	Solver();
 	~Solver();
@@ -23,8 +31,7 @@ public:
 		return cube == RubixCube(); // matching a solved cube
 	}
 	void visualize_state();
-	std::string Solve_DFS(RubixCube current_cube, int depth_limit);
+	std::string Solve_DFS(RubixCube current_cube, std::string Moves, int depth_limit);
 	std::string Solve_IDFS();
-	RubixCube Apply_string_Moves(std::string moveset);
-
+	RubixCube Apply_Moves(RubixCube El_Cube, char* leMoves);
 };
