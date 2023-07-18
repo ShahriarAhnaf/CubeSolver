@@ -21,6 +21,7 @@ string Solver::Solve_DFS(RubixCube current_cube, string Moves, int depth_remaini
         );
         if(result != "") return result;
     }
+    return ""; // when all the nodes are done without a result.
 }
 string Solver::Solve_IDFS()
 {
