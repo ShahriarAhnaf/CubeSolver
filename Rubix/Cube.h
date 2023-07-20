@@ -60,7 +60,13 @@ private:
 	uint64_t* faces; // 6 faces
    void draw_face(uint8_t face_number, int8_t screen_center_x, int8_t screen_center_y);
 public: 
-	bool operator== (const RubixCube& cube){
+	void operator= (const RubixCube& cube){
+      faces = new uint64_t[6];
+      for(int n =0; n < 6; n++){
+         faces[n] = cube.faces[n];
+      }
+   }
+   bool operator== (const RubixCube& cube){
       return cube.faces[0] == faces[0] &&
              cube.faces[1] == faces[1] &&
              cube.faces[2] == faces[2] &&
@@ -69,12 +75,16 @@ public:
              cube.faces[5] == faces[5] ;
    }
 	RubixCube(); // a solved cube.
-	RubixCube(uint64_t* passed_face){
-		faces = passed_face;
+   // copy by value
+	RubixCube(uint64_t* passed_face){ 
+		faces = new uint64_t[6];
+      for(int n =0; n < 6; n++){
+         faces[n] = passed_face[n];
+      }
 	};
 	//DESTROYYYYY
 	~RubixCube(){
-		
+		delete[] faces;
 	};
 	
 void draw(int8_t screen_center_x, int8_t screen_center_y);

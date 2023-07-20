@@ -10,30 +10,40 @@ using std::string;
 using std::vector;
 
 void Solver::Solve_Cube(RubixCube given_cube){
-		Cube = given_cube;
+		if (given_cube == RubixCube()) mvprintw(1,1, "Already Solved!");
+        Cube = given_cube;
         string solved = Solve_DFS(Cube, "", 1);
-		
         if(solved == "") mvprintw(1,1,"We aint making it out the hood");
         else
             mvprintw(1,1, solved.c_str());
 }
 Solver::~Solver(){}
+
+// the current cube is implicitly a reference
 string Solver::Solve_DFS(RubixCube current_cube, string Moves, int depth_remaining){
-    // sleep(1);//chill out the algorithm
-    // std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    current_cube.draw(9,10);
     #ifdef STEP_THROUGH_DEBUGGER
-        while(mvgetch(0,0) != '1'){} //hold the program
+        current_cube.draw(9,10);
+        mvprintw(2,1, "depth %d grinding move: %s\n\r", depth_remaining, Moves.data());
         refresh();
+        while(mvgetch(0,0) != '1'){} //hold the program
     #endif
-    //  mvprintw(2,1, "grinding DFS");
-    if(is_Solved(current_cube)){
-        return Moves;
-    }
+    if(is_Solved(current_cube))return Moves;
     if (depth_remaining == 0) return "";
     // move through all movesets
-    for(string bruh : Moveset ){
-        mvprintw(2,1, "depth %d grinding move: %s\n", depth_remaining, bruh.data());
+    Cube = current_cube;
+    for(const string bruh : Moveset ){
+         // some pass by reference insanity happening while sending by values
+         // ApplyMoves seems to change current_cube 
+        current_cube = Cube;
+         #ifdef STEP_THROUGH_DEBUGGER
+         mvprintw(1,100, "depth %d calling move: %s from %s\n\r", depth_remaining, bruh.data(), Moves.data());
+        mvprintw(2,100, "saved Cube");
+        mvprintw(20,100, " Cube");
+            Cube.draw(100,5);
+            current_cube.draw(100,20);
+             refresh();
+            while(mvgetch(0,0) != '1'){} //hold the program
+         #endif
         string result = Solve_DFS(
             Apply_Moves(current_cube, bruh),
             Moves + " " + bruh,
