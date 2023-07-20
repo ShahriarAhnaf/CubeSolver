@@ -3,17 +3,37 @@
 #include <sstream>
 #include <iterator>
 
+#include <chrono>
+#include <thread>
+
 using std::string;
 using std::vector;
 
+void Solver::Solve_Cube(RubixCube given_cube){
+		Cube = given_cube;
+        string solved = Solve_DFS(Cube, "", 1);
+		
+        if(solved == "") mvprintw(1,1,"We aint making it out the hood");
+        else
+            mvprintw(1,1, solved.c_str());
+}
 Solver::~Solver(){}
 string Solver::Solve_DFS(RubixCube current_cube, string Moves, int depth_remaining){
+    // sleep(1);//chill out the algorithm
+    // std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    current_cube.draw(9,10);
+    #ifdef STEP_THROUGH_DEBUGGER
+        while(mvgetch(0,0) != '1'){} //hold the program
+        refresh();
+    #endif
+    //  mvprintw(2,1, "grinding DFS");
     if(is_Solved(current_cube)){
         return Moves;
     }
     if (depth_remaining == 0) return "";
     // move through all movesets
     for(string bruh : Moveset ){
+        mvprintw(2,1, "depth %d grinding move: %s\n", depth_remaining, bruh.data());
         string result = Solve_DFS(
             Apply_Moves(current_cube, bruh),
             Moves + " " + bruh,
@@ -38,7 +58,7 @@ RubixCube Solver::Apply_Moves(RubixCube El_cube, string leMoves){
     while (iss >> s) {
         tokens.push_back(s);
     }
- 
+    // for each move in the string
     for(const string &Move : tokens){
             if (Move == "L"){
                 El_cube.L(1);

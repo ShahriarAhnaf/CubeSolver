@@ -58,7 +58,7 @@ enum COLOR {WHITE, BLUE, RED, GREEN, ORANGE, YELLOW};
 class RubixCube{
 private:
 	uint64_t* faces; // 6 faces
-   void draw_face(uint8_t face_number);
+   void draw_face(uint8_t face_number, int8_t screen_center_x, int8_t screen_center_y);
 public: 
 	bool operator== (const RubixCube& cube1){
       return cube1.faces == faces;
@@ -72,7 +72,7 @@ public:
 		
 	};
 	
-void draw();
+void draw(int8_t screen_center_x, int8_t screen_center_y);
 void U(uint64_t num_of_turns);
 void D(uint64_t num_of_turns);
 void F(uint64_t num_of_turns);

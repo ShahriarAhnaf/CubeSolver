@@ -2,7 +2,8 @@
 #include <cmath>
 #include "Cube.h"
 
-int8_t location_center[6][2] = {{18,1},{9,5}, {18,5}, {27,5}, {36,5}, {18, 10}}; // {x,y}
+// faces 0-5
+int8_t relative_location_center[6][2] = {{18,1},{9,5}, {18,5}, {27,5}, {36,5}, {18, 10}}; // {x,y}
 // location of the letter form the center, {x,y}, for printing into a proper char
 int8_t print_relative_mapping[9][2] = {{-1,-1}, {0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}, {-1,1}, {-1,0}, {0,0}}; // {rel x, rely}
 
@@ -44,7 +45,7 @@ void print_bytes(uint64_t n, int location, int location_y){
 		}
 	}
 }
-void RubixCube::draw_face(uint8_t face_number){
+void RubixCube::draw_face(uint8_t face_number, int8_t center_x, int8_t center_y){
 	for(int x=0; x<9;x++) {
 		int mask_shift = 8*x;
 		// account for the eight bytes that you need which means you only need 56 shift max.
@@ -57,35 +58,36 @@ void RubixCube::draw_face(uint8_t face_number){
 		//print center
 			eight_bytes = face_number; // center = facenumbers
 		}
+		// using mvprintw(line,col,string)
 		switch(eight_bytes){
 			case WHITE:
-				mvprintw(location_center[face_number][1]+ print_relative_mapping[x][1], location_center[face_number][0] + print_relative_mapping[x][0], "W");
+				mvprintw(center_y + relative_location_center[face_number][1]+ print_relative_mapping[x][1], center_x + relative_location_center[face_number][0] + print_relative_mapping[x][0], "W");
 				break;
 			case BLUE:
-				mvprintw(location_center[face_number][1]+ print_relative_mapping[x][1], location_center[face_number][0] + print_relative_mapping[x][0],"B");
+				mvprintw(center_y + relative_location_center[face_number][1]+ print_relative_mapping[x][1], center_x +relative_location_center[face_number][0] + print_relative_mapping[x][0],"B");
 				break;
 			case RED:
-				mvprintw(location_center[face_number][1]+ print_relative_mapping[x][1], location_center[face_number][0] + print_relative_mapping[x][0], "R");
+				mvprintw(center_y + relative_location_center[face_number][1]+ print_relative_mapping[x][1], center_x +relative_location_center[face_number][0] + print_relative_mapping[x][0], "R");
 				break;
 			case GREEN:
-				mvprintw(location_center[face_number][1]+ print_relative_mapping[x][1], location_center[face_number][0] + print_relative_mapping[x][0], "G");
+				mvprintw(center_y + relative_location_center[face_number][1]+ print_relative_mapping[x][1], center_x +relative_location_center[face_number][0] + print_relative_mapping[x][0], "G");
 				break;
 			case ORANGE:
-				mvprintw(location_center[face_number][1]+ print_relative_mapping[x][1], location_center[face_number][0] + print_relative_mapping[x][0], "O");
+				mvprintw(center_y + relative_location_center[face_number][1]+ print_relative_mapping[x][1], center_x +relative_location_center[face_number][0] + print_relative_mapping[x][0], "O");
 				break;
 			case YELLOW:
-				mvprintw(location_center[face_number][1]+ print_relative_mapping[x][1], location_center[face_number][0] + print_relative_mapping[x][0],"Y");
+				mvprintw(center_y + relative_location_center[face_number][1]+ print_relative_mapping[x][1], center_x +relative_location_center[face_number][0] + print_relative_mapping[x][0],"Y");
 				break;
 			default:
-				mvprintw(location_center[face_number][1]+ print_relative_mapping[x][1], location_center[face_number][0] + print_relative_mapping[x][0], "X");
+				mvprintw(center_y + relative_location_center[face_number][1]+ print_relative_mapping[x][1], center_x+relative_location_center[face_number][0] + print_relative_mapping[x][0], "X");
 				break;
 		}
 	}
 }
 
-void RubixCube::draw(){
+void RubixCube::draw(int8_t screen_center_x, int8_t screen_center_y){
     // printing each face
-    for(int n=0; n < 6; n++){draw_face(n);}
+    for(int n=0; n < 6; n++){draw_face(n, screen_center_x, screen_center_y);}
 }
 
 // moves the upper face clockwise

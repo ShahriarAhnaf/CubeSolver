@@ -1,16 +1,21 @@
 #include "Solver.h"
 
 int main(){
-
+    int x,y;
     RubixCube cube;
     Solver leSolver;
+    WINDOW *solver_window;
     bool quit = false;
     initscr();
+    noecho();
+
+    getmaxyx(stdscr, y,x);
+
     while(!quit){
-        cube.draw();
-        switch(getch()){
+        cube.draw(x/4,y/2); // middle of screen
+        switch(mvgetch(0, 0)){
             case 'u':
-                cube.U(1);
+                cube.U(1); 
                 break;
             case 'U':
                 cube.U_PRIME(1);
@@ -46,9 +51,15 @@ int main(){
                 cube.D_PRIME(1);
                 break; 
             case 's':
+                solver_window = newwin(y/4, x/4, 0, 0);
                 // solve on current cube
-                // Solver leSolver = Solver(cube); 
                 leSolver.Solve_Cube(cube);
+                // cube = leSolver.Apply_Moves(cube, " "); // testing apply moves
+                switch(mvgetch(0,1)){
+                    case 'q':
+                        delwin(solver_window);
+                    break;
+                }
                 break;
             case 'q':
                 quit = true;

@@ -37,10 +37,7 @@ public:
 	bool is_Solved(RubixCube cube){
 		return cube == RubixCube(); // matching a solved cube
 	}
-	void Solve_Cube(RubixCube given_cube){
-		Cube = given_cube;
-		mvprintw(0,0, Solve_DFS(Cube, "", 3).c_str());
-	}
+	void Solve_Cube(RubixCube given_cube);
 	void visualize_state();
 	void scramble();
 	RubixCube Apply_Moves(RubixCube El_Cube, std::string leMoves);

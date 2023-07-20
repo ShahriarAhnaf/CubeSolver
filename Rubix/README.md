@@ -7,5 +7,4 @@
 ## TODO
 - Search algorithm
 - Main loop redo
-- better commenting of function helpers
-- finish documentation of txt files
+- Go crazy using Ncurses, -> learn to use multi windows
