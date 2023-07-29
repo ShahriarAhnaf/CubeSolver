@@ -10,6 +10,7 @@ int main(){
     int x,y;
     RubixCube cube;
     RubixCube before;
+    RubixCube holder;
     Solver leSolver;
     WINDOW *solver_window;
     bool quit = false;
@@ -69,7 +70,8 @@ int main(){
                 // passing by value to test if it turns into reference??? 
                 before = cube;
                 if (!(cube == before)) mvprintw(2,1,"operator test FAIL");
-                GO_CRAZY_TEST(cube);
+                // GO_CRAZY_TEST(cube);
+                holder = leSolver.Apply_Moves(cube, "L");
                 if (!(cube == before)) mvprintw(1,1,"Pass by value FAIL");
                 break;
             case 'q':

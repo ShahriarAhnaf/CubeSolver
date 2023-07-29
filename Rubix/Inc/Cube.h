@@ -61,9 +61,11 @@ private:
    void draw_face(uint8_t face_number, int8_t screen_center_x, int8_t screen_center_y);
 public: 
 	void operator= (const RubixCube& cube){
-      faces = new uint64_t[6];
+      if(faces == nullptr){ // only allocate if necessary otherwise will lose pointer
+         faces = new uint64_t[6];
+      }
       for(int n =0; n < 6; n++){
-         faces[n] = cube.faces[n];
+            faces[n] = cube.faces[n];
       }
    }
    bool operator== (const RubixCube& cube){

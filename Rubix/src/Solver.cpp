@@ -60,7 +60,8 @@ string Solver::Solve_IDFS()
 
 //applys a series of moves
 RubixCube Solver::Apply_Moves(RubixCube El_cube, string leMoves){
-   
+    RubixCube Local_Copy_Cube = RubixCube(); // stack solved cube 
+    Local_Copy_Cube = El_cube; // supposed to copy over dem values
     vector<string> tokens;
  
     std::istringstream iss(leMoves);
@@ -71,63 +72,63 @@ RubixCube Solver::Apply_Moves(RubixCube El_cube, string leMoves){
     // for each move in the string
     for(const string &Move : tokens){
             if (Move == "L"){
-                El_cube.L(1);
+                Local_Copy_Cube.L(1);
                 }
             else if (Move == "LPRIME"){
-                El_cube.L_PRIME(1);
+                Local_Copy_Cube.L_PRIME(1);
                 }
             else if (Move == "L2"){
-                El_cube.L_PRIME(2);
+                Local_Copy_Cube.L_PRIME(2);
                 }
 	        else if (Move == "R"){
-                El_cube.R(1);
+                Local_Copy_Cube.R(1);
                 }
             else if (Move == "RPRIME"){
-                El_cube.R_PRIME(1);
+                Local_Copy_Cube.R_PRIME(1);
                 } 
             else if (Move == "R2"){
-                El_cube.R_PRIME(2);
+                Local_Copy_Cube.R_PRIME(2);
                 } 
             else if (Move == "U"){
-                El_cube.U(1);
+                Local_Copy_Cube.U(1);
                 } 
             else if (Move == "UPRIME"){
-                El_cube.U_PRIME(1);
+                Local_Copy_Cube.U_PRIME(1);
                 } 
             else if (Move == "U2"){
-                El_cube.U(2);
+                Local_Copy_Cube.U(2);
                 } 
             else if (Move == "D"){
-                El_cube.D(1);
+                Local_Copy_Cube.D(1);
                 }  
             else if (Move == "DPRIME"){
-                El_cube.D_PRIME(1);
+                Local_Copy_Cube.D_PRIME(1);
                 } 
             else if (Move == "D2"){
-                El_cube.D(2);
+                Local_Copy_Cube.D(2);
                 } 
             else if (Move == "F"){
-                El_cube.F(1);
+                Local_Copy_Cube.F(1);
                 }  
             else if (Move == "FPRIME"){
-                El_cube.F_PRIME(1);
+                Local_Copy_Cube.F_PRIME(1);
                 } 
             else if (Move == "F2"){
-                El_cube.F(2);
+                Local_Copy_Cube.F(2);
                 } 
             else if (Move == "B"){
-                El_cube.B(1);
+                Local_Copy_Cube.B(1);
                 }  
             else if (Move == "BPRIME"){
-                El_cube.B_PRIME(1);
+                Local_Copy_Cube.B_PRIME(1);
                 }  
             else if (Move == "B2"){
-                El_cube.B(2);
+                Local_Copy_Cube.B(2);
                 } 
             else {
                 std::cout << "move not found" << std::endl;
             }       
     }
-    return El_cube;
+    return Local_Copy_Cube; // to save the original cube
 	}
 
