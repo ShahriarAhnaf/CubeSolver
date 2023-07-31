@@ -3,13 +3,14 @@
 #include <sstream>
 #include <iterator>
 
+#include <assert.h>
 #include <chrono>
 #include <thread>
 
 using std::string;
 using std::vector;
 
-void Solver::Solve_Cube(RubixCube given_cube){
+void Solver::Solve_Cube(RubixCube &given_cube){
 		if (given_cube == RubixCube()) mvprintw(1,1, "Already Solved!");
         string solved = Solve_DFS(given_cube, "", 1);
         if(solved == "") mvprintw(1,1,"We aint making it out the hood");
@@ -19,24 +20,26 @@ void Solver::Solve_Cube(RubixCube given_cube){
 Solver::~Solver(){}
 
 // the current cube is implicitly a reference
-string Solver::Solve_DFS(RubixCube current_cube, string Moves, int depth_remaining){
+string Solver::Solve_DFS(RubixCube given_cube, string Moves, int depth_remaining){
+    RubixCube current_cube; 
+    current_cube = given_cube;
     #ifdef STEP_THROUGH_DEBUGGER
         current_cube.draw(9,10);
         mvprintw(2,1, "depth %d grinding move: %s\n\r", depth_remaining, Moves.data());
         refresh();
         while(mvgetch(0,0) != '1'){} //hold the program
     #endif
-    if(is_Solved(current_cube))return Moves;
+    if(is_Solved(given_cube))return Moves;
     if (depth_remaining == 0) return "";
     for(const string &bruh : Moveset ){
          // some pass by reference insanity happening while sending by values
          // ApplyMoves seems to change current_cube 
          #ifdef STEP_THROUGH_DEBUGGER
          mvprintw(1,100, "depth %d calling move: %s from %s\n\r", depth_remaining, bruh.data(), Moves.data());
-        mvprintw(2,100, "saved Cube");
-        mvprintw(20,100, " Cube");
-            // Cube.draw(100,5);
-            current_cube.draw(100,20);
+        mvprintw(2,100, "saved Cube, should match given_Cube");
+        mvprintw(20,100, "given_Cube");
+            current_cube.draw(100,5);
+            given_cube.draw(100,20);
              refresh();
             while(mvgetch(0,0) != '1'){} //hold the program
          #endif

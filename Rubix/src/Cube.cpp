@@ -94,7 +94,7 @@ void RubixCube::draw(int8_t screen_center_x, int8_t screen_center_y){
 
 // solved cube
 RubixCube::RubixCube(){
-	faces = new u_int64_t[6]{};
+	// faces = new u_int64_t[6]{};
     faces[0] = 0x00; // 0x0
 	faces[1] = 0x0101010102010101; //0x0101010101010101
 	faces[2] = 0x0202020202020202; //0x0202020202020202 
