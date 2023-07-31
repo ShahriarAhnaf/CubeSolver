@@ -86,7 +86,7 @@ public:
 	};
 	//DESTROYYYYY
 	~RubixCube(){
-		delete[] faces;
+		if(faces) delete[] faces;
 	};
 	
 void draw(int8_t screen_center_x, int8_t screen_center_y);

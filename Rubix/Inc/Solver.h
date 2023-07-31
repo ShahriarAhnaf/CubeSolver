@@ -15,7 +15,6 @@ enum {
 // RubixCube Solved_Cube = RubixCube();
 class Solver{
 private: 
-	RubixCube Cube;
 	std::string Moveset[18] = {
       "L", "LPRIME", "L2",
 	  "R", "RPRIME", "R2",
@@ -30,9 +29,9 @@ private:
 public: 
 	//copy for now, might be useful to pass by ref?
 	Solver(){}
-	Solver(RubixCube cube){
-		Cube = cube;
-	}
+	// Solver(RubixCube cube){
+	// 	Cube = cube;
+	// }
 	~Solver();
 	bool is_Solved(RubixCube cube){
 		return cube == RubixCube(); // matching a solved cube
@@ -40,5 +39,5 @@ public:
 	void Solve_Cube(RubixCube given_cube);
 	void visualize_state();
 	void scramble();
-	RubixCube Apply_Moves(RubixCube El_Cube, std::string leMoves);
+	RubixCube Apply_Moves(RubixCube &El_Cube, std::string leMoves);
 };

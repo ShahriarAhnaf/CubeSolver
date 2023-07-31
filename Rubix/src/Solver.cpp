@@ -11,8 +11,7 @@ using std::vector;
 
 void Solver::Solve_Cube(RubixCube given_cube){
 		if (given_cube == RubixCube()) mvprintw(1,1, "Already Solved!");
-        Cube = given_cube;
-        string solved = Solve_DFS(Cube, "", 1);
+        string solved = Solve_DFS(given_cube, "", 1);
         if(solved == "") mvprintw(1,1,"We aint making it out the hood");
         else
             mvprintw(1,1, solved.c_str());
@@ -29,17 +28,14 @@ string Solver::Solve_DFS(RubixCube current_cube, string Moves, int depth_remaini
     #endif
     if(is_Solved(current_cube))return Moves;
     if (depth_remaining == 0) return "";
-    // move through all movesets
-    Cube = current_cube;
-    for(const string bruh : Moveset ){
+    for(const string &bruh : Moveset ){
          // some pass by reference insanity happening while sending by values
          // ApplyMoves seems to change current_cube 
-        current_cube = Cube;
          #ifdef STEP_THROUGH_DEBUGGER
          mvprintw(1,100, "depth %d calling move: %s from %s\n\r", depth_remaining, bruh.data(), Moves.data());
         mvprintw(2,100, "saved Cube");
         mvprintw(20,100, " Cube");
-            Cube.draw(100,5);
+            // Cube.draw(100,5);
             current_cube.draw(100,20);
              refresh();
             while(mvgetch(0,0) != '1'){} //hold the program
@@ -59,8 +55,8 @@ string Solver::Solve_IDFS()
 }
 
 //applys a series of moves
-RubixCube Solver::Apply_Moves(RubixCube El_cube, string leMoves){
-    RubixCube Local_Copy_Cube = RubixCube(); // stack solved cube 
+RubixCube Solver::Apply_Moves(RubixCube &El_cube, string leMoves){
+    RubixCube Local_Copy_Cube; // stack solved cube 
     Local_Copy_Cube = El_cube; // supposed to copy over dem values
     vector<string> tokens;
  
