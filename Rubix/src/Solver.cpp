@@ -10,17 +10,33 @@
 using std::string;
 using std::vector;
 
-void Solver::Solve_Cube(RubixCube &given_cube){
-		if (given_cube == RubixCube()) mvprintw(1,1, "Already Solved!");
-        string solved = Solve_DFS(given_cube, "", 1);
-        if(solved == "") mvprintw(1,1,"We aint making it out the hood");
-        else
-            mvprintw(1,1, solved.c_str());
+
+static long int DFS_count = 0;
+// static long int IDFS_count = 0;
+
+void Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit){
+		
+        string IDFS_solved = Solve_IDFS(given_cube, Depth_Limit);
+        if(IDFS_solved == "") mvprintw(10,1,"We aint making it out the hood");
+         else {
+            mvprintw(10,1, IDFS_solved.c_str());
+            mvprintw(15,5, "Total iterative Cube State Checks = %ld", DFS_count);   
+            
+         }
+        //  if (given_cube == RubixCube()) mvprintw(1,1, "Already Solved!");
+        // string solved = Solve_DFS(given_cube, "", Depth_Limit);
+
+        // if(solved == "") mvprintw(1,1,"We aint making it out the hood");
+        // else {
+        //     mvprintw(1,1, solved.c_str());
+        //     mvprintw(5,5, "Total Cube State Checks = %ld", DFS_count);   
+        // }
 }
 Solver::~Solver(){}
 
 // the current cube is implicitly a reference
 string Solver::Solve_DFS(RubixCube given_cube, string Moves, int depth_remaining){
+    DFS_count++;
     RubixCube current_cube; 
     current_cube = given_cube;
     #ifdef STEP_THROUGH_DEBUGGER
@@ -52,9 +68,19 @@ string Solver::Solve_DFS(RubixCube given_cube, string Moves, int depth_remaining
     }
     return ""; // when all the nodes are done without a result.
 }
-string Solver::Solve_IDFS()
+
+//returns "" if answer not found
+string Solver::Solve_IDFS(RubixCube given_cube, int Depth_Limit)
 {
-    return "bruh";
+    // reset counter 
+    DFS_count = 0;
+
+    string nice = "";
+    for(int n =1; n < Depth_Limit; n++){
+        nice = Solve_DFS(given_cube, "", n);
+        if(nice!= "") break; // exit loop when answer is found
+    }
+    return nice;
 }
 
 //applys a series of moves

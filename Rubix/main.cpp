@@ -61,8 +61,9 @@ int main(){
             case 's':
                  solver_window = newwin(y/4, x/4, 0, 0);
                 // solve on current cube
-                leSolver.Solve_Cube(cube);
-                // cube = leSolver.Apply_Moves(cube, " "); // testing apply moves
+                leSolver.Solve_Cube(cube, 10);
+                // show solve
+
                 while(mvgetch(0,1) != 'q'){}
                 delwin(solver_window);
                 break;
