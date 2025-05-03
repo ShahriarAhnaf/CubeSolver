@@ -31,6 +31,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
+# Add OpenGL deprecation handling for macOS
+if(APPLE)
+    add_definitions(-DGL_SILENCE_DEPRECATION)
+endif()
+
 # Include FetchContent for dependencies
 include(FetchContent)
 
@@ -45,13 +50,23 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(glfw)
 
-# Fetch GLAD
+# Fetch GLAD with updated CMake version
 FetchContent_Declare(
     glad
     GIT_REPOSITORY https://github.com/Dav1dde/glad.git
     GIT_TAG v0.1.36
 )
+# Override GLAD's minimum CMake version
+set(CMAKE_MINIMUM_REQUIRED_VERSION 3.10 CACHE STRING "Minimum CMake version" FORCE)
 FetchContent_MakeAvailable(glad)
+
+# Fetch GLM
+FetchContent_Declare(
+    glm
+    GIT_REPOSITORY https://github.com/g-truc/glm.git
+    GIT_TAG 0.9.9.8
+)
+FetchContent_MakeAvailable(glm)
 
 # Find required packages
 find_package(OpenGL REQUIRED)
@@ -66,8 +81,11 @@ add_executable(RubiksCubeVisualizer
 # Set target properties
 target_include_directories(RubiksCubeVisualizer PRIVATE
     ${OPENGL_INCLUDE_DIR}
+    ${GLFW_INCLUDE_DIRS}
+    ${GLM_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${glad_SOURCE_DIR}/include
+    ${glm_SOURCE_DIR}
 )
 
 # Link libraries
@@ -75,6 +93,7 @@ target_link_libraries(RubiksCubeVisualizer PRIVATE
     ${OPENGL_LIBRARIES}
     glfw
     glad
+    ${GLM_LIBRARIES}
 )
 
 # Copy shader files to build directory

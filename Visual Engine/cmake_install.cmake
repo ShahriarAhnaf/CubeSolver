@@ -44,7 +44,7 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("/Users/ahnaf/Desktop/Coding/CubeSolver/Visual Engine/_deps/glm-build/cmake_install.cmake")
+  include("/Users/ahnaf/Desktop/Coding/CubeSolver/Visual Engine/_deps/glad-build/cmake_install.cmake")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)

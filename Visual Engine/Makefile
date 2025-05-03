@@ -240,17 +240,30 @@ glfw/fast:
 .PHONY : glfw/fast
 
 #=============================================================================
-# Target rules for targets named glm
+# Target rules for targets named glad-generate-files
 
 # Build rule for target.
-glm: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 glm
-.PHONY : glm
+glad-generate-files: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 glad-generate-files
+.PHONY : glad-generate-files
 
 # fast build rule for target.
-glm/fast:
-	$(MAKE) $(MAKESILENT) -f _deps/glm-build/glm/CMakeFiles/glm.dir/build.make _deps/glm-build/glm/CMakeFiles/glm.dir/build
-.PHONY : glm/fast
+glad-generate-files/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/glad-build/CMakeFiles/glad-generate-files.dir/build.make _deps/glad-build/CMakeFiles/glad-generate-files.dir/build
+.PHONY : glad-generate-files/fast
+
+#=============================================================================
+# Target rules for targets named glad
+
+# Build rule for target.
+glad: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 glad
+.PHONY : glad
+
+# fast build rule for target.
+glad/fast:
+	$(MAKE) $(MAKESILENT) -f _deps/glad-build/CMakeFiles/glad.dir/build.make _deps/glad-build/CMakeFiles/glad.dir/build
+.PHONY : glad/fast
 
 src/CubeRenderer.o: src/CubeRenderer.cpp.o
 .PHONY : src/CubeRenderer.o
@@ -313,12 +326,13 @@ help:
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
 	@echo "... clean-build"
+	@echo "... glad-generate-files"
 	@echo "... run"
 	@echo "... uninstall"
 	@echo "... update_mappings"
 	@echo "... RubiksCubeVisualizer"
+	@echo "... glad"
 	@echo "... glfw"
-	@echo "... glm"
 	@echo "... src/CubeRenderer.o"
 	@echo "... src/CubeRenderer.i"
 	@echo "... src/CubeRenderer.s"

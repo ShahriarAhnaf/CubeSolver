@@ -29,19 +29,24 @@ bool CubeRenderer::initialize() {
     }
 
     // Configure GLFW
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);  // Required for macOS
 
     // Create window
     window = glfwCreateWindow(windowWidth, windowHeight, "Rubik's Cube Visualizer", nullptr, nullptr);
     if (!window) {
         std::cerr << "Failed to create GLFW window" << std::endl;
-        glfwTerminate();
+        cleanup();  // Clean up GLFW
         return false;
     }
 
     glfwMakeContextCurrent(window);
+    
+    // Set window user pointer to this instance
+    glfwSetWindowUserPointer(window, this);
+    
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
     glfwSetCursorPosCallback(window, mouseCallback);
     glfwSetScrollCallback(window, scrollCallback);
@@ -49,6 +54,7 @@ bool CubeRenderer::initialize() {
     // Set up OpenGL
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cerr << "Failed to initialize GLAD" << std::endl;
+        cleanup();  // Clean up GLFW and window
         return false;
     }
 
@@ -57,6 +63,7 @@ bool CubeRenderer::initialize() {
 
     // Compile shaders
     if (!compileShaders()) {
+        cleanup();  // Clean up GLFW, window, and OpenGL context
         return false;
     }
 
@@ -114,10 +121,14 @@ void CubeRenderer::processInput() {
 }
 
 void CubeRenderer::cleanup() {
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
-    glDeleteProgram(shaderProgram);
+    if (VAO != 0) glDeleteVertexArrays(1, &VAO);
+    if (VBO != 0) glDeleteBuffers(1, &VBO);
+    if (EBO != 0) glDeleteBuffers(1, &EBO);
+    if (shaderProgram != 0) glDeleteProgram(shaderProgram);
+    if (window != nullptr) {
+        glfwDestroyWindow(window);
+        window = nullptr;
+    }
     glfwTerminate();
 }
 
@@ -213,10 +224,12 @@ void CubeRenderer::setupCubeGeometry() {
     // Position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    
     // Normal attribute
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
-    // Texture coord attribute
+    
+    // Texture coordinate attribute
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
     glEnableVertexAttribArray(2);
 }
@@ -269,10 +282,14 @@ void CubeRenderer::framebufferSizeCallback(GLFWwindow* window, int width, int he
 
 void CubeRenderer::mouseCallback(GLFWwindow* window, double xpos, double ypos) {
     CubeRenderer* renderer = static_cast<CubeRenderer*>(glfwGetWindowUserPointer(window));
-    renderer->handleMouseMovement(xpos, ypos);
+    if (renderer) {
+        renderer->handleMouseMovement(xpos, ypos);
+    }
 }
 
 void CubeRenderer::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
     CubeRenderer* renderer = static_cast<CubeRenderer*>(glfwGetWindowUserPointer(window));
-    renderer->handleScroll(xoffset, yoffset);
+    if (renderer) {
+        renderer->handleScroll(xoffset, yoffset);
+    }
 } 

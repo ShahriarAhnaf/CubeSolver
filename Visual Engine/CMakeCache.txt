@@ -150,6 +150,9 @@ CMAKE_LINKER:FILEPATH=/usr/bin/ld
 //Path to a program.
 CMAKE_MAKE_PROGRAM:FILEPATH=/usr/bin/make
 
+//Minimum CMake version
+CMAKE_MINIMUM_REQUIRED_VERSION:STRING=3.10
+
 //Flags used by the linker during the creation of modules during
 // all build types.
 CMAKE_MODULE_LINKER_FLAGS:STRING=
@@ -290,6 +293,10 @@ FETCHCONTENT_FULLY_DISCONNECTED:BOOL=OFF
 FETCHCONTENT_QUIET:BOOL=ON
 
 //When not empty, overrides where to find pre-populated content
+// for glad
+FETCHCONTENT_SOURCE_DIR_GLAD:PATH=
+
+//When not empty, overrides where to find pre-populated content
 // for glfw
 FETCHCONTENT_SOURCE_DIR_GLFW:PATH=
 
@@ -300,6 +307,9 @@ FETCHCONTENT_SOURCE_DIR_GLM:PATH=
 //Enables UPDATE_DISCONNECTED behavior for all content population
 FETCHCONTENT_UPDATES_DISCONNECTED:BOOL=OFF
 
+//Enables UPDATE_DISCONNECTED behavior just for population of glad
+FETCHCONTENT_UPDATES_DISCONNECTED_GLAD:BOOL=OFF
+
 //Enables UPDATE_DISCONNECTED behavior just for population of glfw
 FETCHCONTENT_UPDATES_DISCONNECTED_GLFW:BOOL=OFF
 
@@ -308,6 +318,50 @@ FETCHCONTENT_UPDATES_DISCONNECTED_GLM:BOOL=OFF
 
 //Git command line client
 GIT_EXECUTABLE:FILEPATH=/usr/bin/git
+
+//Include all extensions instead of those specified by GLAD_EXTENSIONS
+GLAD_ALL_EXTENSIONS:BOOL=OFF
+
+//API type/version pairs, like "gl=3.2,gles=", no version means
+// latest
+GLAD_API:STRING=
+
+//Value Computed by CMake
+GLAD_BINARY_DIR:STATIC=/Users/ahnaf/Desktop/Coding/CubeSolver/Visual Engine/_deps/glad-build
+
+//Set export variables for external project
+GLAD_EXPORT:BOOL=ON
+
+//Path to extensions file or comma separated list of extensions,
+// if missing all extensions are included
+GLAD_EXTENSIONS:STRING=
+
+//Language to generate the binding for
+GLAD_GENERATOR:STRING=c
+
+//Generate installation target
+GLAD_INSTALL:BOOL=OFF
+
+//Value Computed by CMake
+GLAD_IS_TOP_LEVEL:STATIC=OFF
+
+//No loader
+GLAD_NO_LOADER:BOOL=OFF
+
+//Output directory
+GLAD_OUT_DIR:STRING=/Users/ahnaf/Desktop/Coding/CubeSolver/Visual Engine/_deps/glad-build
+
+//OpenGL profile
+GLAD_PROFILE:STRING=compatibility
+
+//Reproducible build
+GLAD_REPRODUCIBLE:BOOL=OFF
+
+//Value Computed by CMake
+GLAD_SOURCE_DIR:STATIC=/Users/ahnaf/Desktop/Coding/CubeSolver/Visual Engine/_deps/glad-src
+
+//Name of the spec or list of multiple specs (separated by semicolons).
+GLAD_SPEC:STRING=gl
 
 //Value Computed by CMake
 GLFW_BINARY_DIR:STATIC=/Users/ahnaf/Desktop/Coding/CubeSolver/Visual Engine/_deps/glfw-build
@@ -571,7 +625,7 @@ CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_NM
 CMAKE_NM-ADVANCED:INTERNAL=1
 //number of local generators
-CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=5
+CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=4
 //ADVANCED property for variable: CMAKE_OBJCOPY
 CMAKE_OBJCOPY-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_OBJDUMP
@@ -618,6 +672,8 @@ CMAKE_UNAME:INTERNAL=/usr/bin/uname
 CMAKE_VERBOSE_MAKEFILE-ADVANCED:INTERNAL=1
 //Details about finding OpenGL
 FIND_PACKAGE_MESSAGE_DETAILS_OpenGL:INTERNAL=[/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/OpenGL.framework][/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/OpenGL.framework][ ][v()]
+//Details about finding Python
+FIND_PACKAGE_MESSAGE_DETAILS_Python:INTERNAL=[/opt/homebrew/Frameworks/Python.framework/Versions/3.13/bin/python3.13][found components: Interpreter ][v3.13.3()]
 //Details about finding Threads
 FIND_PACKAGE_MESSAGE_DETAILS_Threads:INTERNAL=[TRUE][v()]
 //ADVANCED property for variable: GIT_EXECUTABLE
@@ -632,4 +688,15 @@ OPENGL_gl_LIBRARY-ADVANCED:INTERNAL=1
 OPENGL_glu_LIBRARY-ADVANCED:INTERNAL=1
 //CMAKE_INSTALL_PREFIX during last run
 _GNUInstallDirs_LAST_CMAKE_INSTALL_PREFIX:INTERNAL=/usr/local
+//Compiler reason failure
+_Python_Compiler_REASON_FAILURE:INTERNAL=
+//Development reason failure
+_Python_Development_REASON_FAILURE:INTERNAL=
+//Path to a program.
+_Python_EXECUTABLE:INTERNAL=/opt/homebrew/Frameworks/Python.framework/Versions/3.13/bin/python3.13
+//Python Properties
+_Python_INTERPRETER_PROPERTIES:INTERNAL=Python;3;13;3;64;32;<none>;cpython-313-darwin;abi3;/opt/homebrew/opt/python@3.13/Frameworks/Python.framework/Versions/3.13/lib/python3.13;/opt/homebrew/opt/python@3.13/Frameworks/Python.framework/Versions/3.13/lib/python3.13;/opt/homebrew/lib/python3.13/site-packages;/opt/homebrew/lib/python3.13/site-packages
+_Python_INTERPRETER_SIGNATURE:INTERNAL=7a1f714cc7198cb3c0d06752fabdd0bf
+//NumPy reason failure
+_Python_NumPy_REASON_FAILURE:INTERNAL=
 
