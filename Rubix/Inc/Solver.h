@@ -76,6 +76,29 @@ private:
 	std::string solve_bottom_cross(RubixCube& cube);
 	std::string solve_bottom_corners(RubixCube& cube);
 	
+    // Helper function to check if a move would undo the previous move
+    bool is_redundant_move(const std::string& current_move, const std::string& previous_move) const {
+        if (previous_move.empty()) return false;
+        
+        // Get the base move (without prime or 2)
+        char current_base = current_move[0];
+        char prev_base = previous_move[0];
+        
+        // Same face moves are redundant
+        if (current_base == prev_base) return true;
+        
+        // Check if current move would undo previous move
+        if (current_base == prev_base) {
+            // If previous was prime and current is not, or vice versa
+            if ((previous_move.find("PRIME") != std::string::npos && current_move.find("PRIME") == std::string::npos) ||
+                (previous_move.find("PRIME") == std::string::npos && current_move.find("PRIME") != std::string::npos)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
 public: 
 	//copy for now, might be useful to pass by ref?
 	Solver(){}

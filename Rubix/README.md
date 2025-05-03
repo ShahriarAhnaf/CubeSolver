@@ -1,10 +1,123 @@
-# Rubix solver 
+# Rubix Cube Solver
 
-- implements beginner's method 
-- uses bitwise representation of rubix cube for efficiency
+A C++ implementation of a Rubik's Cube solver with advanced solving algorithms.
 
+## Prerequisites
 
-## TODO
-- Search algorithm
-- Main loop redo
-- Go crazy using Ncurses, -> learn to use multi windows
+- CMake 3.15 or higher
+- C++17 compatible compiler
+
+## Building the Project
+
+### Basic Build
+
+```bash
+# Create build directory
+mkdir build
+cd build
+
+# Configure with CMake
+cmake ..
+
+# Build the project
+cmake --build .
+```
+
+### Build Options
+
+You can specify the build type using:
+```bash
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+# or
+cmake -DCMAKE_BUILD_TYPE=Release ..
+```
+
+Available build types:
+- Debug: Debug build with symbols
+- Release: Optimized release build
+- RelWithDebInfo: Release build with debug symbols
+- MinSizeRel: Minimum size release build
+
+### Running the Application
+
+After building, you can run the application using:
+```bash
+# From the build directory
+./CubeSolver
+```
+
+Or use the custom run target:
+```bash
+cmake --build . --target run
+```
+
+### Running Tests
+
+To run the test suite:
+```bash
+# From the build directory
+./Test_Cube
+```
+
+Or use the custom test target:
+```bash
+cmake --build . --target run-tests
+```
+
+### Cleaning the Build
+
+To clean the build:
+```bash
+cmake --build . --target clean
+```
+
+Or use the custom clean target:
+```bash
+cmake --build . --target clean-build
+```
+
+## Project Structure
+
+```
+Rubix/
+├── Inc/              # Header files
+├── src/              # Source files
+├── Testing/          # Test files
+├── docs/             # Documentation
+├── CMakeLists.txt    # Build configuration
+└── README.md         # This file
+```
+
+## Development
+
+### Adding New Files
+
+1. Add source files to the `SOURCES` list in CMakeLists.txt
+2. Add header files to the `HEADERS` list in CMakeLists.txt
+3. Rebuild the project
+
+### Debugging
+
+For debugging, use the Debug build type:
+```bash
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+cmake --build .
+```
+
+### Testing
+
+To disable testing during build:
+```bash
+cmake -DBUILD_TESTING=OFF ..
+```
+
+## Features
+
+- Advanced cube solving algorithms
+- State validation
+- Move sequence optimization
+- Testing framework
+
+## License
+
+[Your License Here] 

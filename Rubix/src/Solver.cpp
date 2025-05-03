@@ -47,30 +47,40 @@ bool Solver::matches_target(const RubixCube& cube, const TargetState& target) {
 Solver::~Solver(){}
 
 // the current cube is implicitly a reference
-std::string Solver::Solve_DFS(RubixCube current_cube, TargetState target_state, std::string Moves, int depth_remaining) {
-    if(depth_remaining == 0) {
-        if(matches_target(current_cube, target_state)) {
-            return Moves;
-        }
-        return "";
+bool Solver::Solve_DFS(RubixCube current_cube, RubixCube target_cube, int depth, std::string& solution, std::string previous_move) {
+    if (depth == 0) {
+        return false;
     }
     
-    for(const std::string& move : this->Moveset) {
-        #ifdef STEP_THROUGH_DEBUGGER
-        mvprintw(1,100, "depth %d calling move: %s from %s\n\r", depth_remaining, move.data(), Moves.data());
-        mvprintw(2,100, "saved Cube, should match given_Cube");
-        mvprintw(20,100, "given_Cube");
-        cube_copy.draw(100,5);
-        #endif
+    if (DFS_count++ > MAX_DFS_COUNT) {
+        return false;
+    }
+    
+    if (current_cube == target_cube) {
+        return true;
+    }
+    
+    // Try all possible moves
+    std::vector<std::string> moves = {"U", "U'", "U2", "D", "D'", "D2", 
+                                    "R", "R'", "R2", "L", "L'", "L2",
+                                    "F", "F'", "F2", "B", "B'", "B2"};
+    
+    for (const auto& move : moves) {
+        // Skip redundant moves
+        if (is_redundant_move(move, previous_move)) {
+            continue;
+        }
         
         RubixCube cube_copy = current_cube;
-        cube_copy = Apply_Moves(cube_copy, move);
-        std::string result = Solve_DFS(cube_copy, target_state, Moves + move + " ", depth_remaining - 1);
-        if(result != "") {
-            return result;
+        cube_copy.Apply_Moves(cube_copy, move);
+        
+        if (Solve_DFS(cube_copy, target_cube, depth - 1, solution, move)) {
+            solution = move + " " + solution;
+            return true;
         }
     }
-    return "";
+    
+    return false;
 }
 
 //returns "" if answer not found
@@ -79,7 +89,7 @@ std::string Solver::Solve_IDFS(RubixCube given_cube, TargetState target_state, i
     DFS_count = 0;
     std::string nice = "";
     for(int n = 1; n < Depth_Limit; n++) {
-        nice = Solve_DFS(given_cube, target_state, "", n);
+        nice = Solve_DFS(given_cube, target_state, "", n, "");
         if(nice != "") break; // exit loop when answer is found
     }
     return nice;

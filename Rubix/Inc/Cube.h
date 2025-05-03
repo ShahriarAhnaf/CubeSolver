@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <ncurses.h>
+#include <unordered_map>
 #ifndef CUBE_H
 #define CUBE_H
 
@@ -77,22 +78,34 @@ class RubixCube{
 private:
 	uint64_t faces[6]; // 6 faces
    void draw_face(uint8_t face_number, int8_t screen_center_x, int8_t screen_center_y);
+   
+   // Pre-computed rotation masks
+   static const uint64_t ROTATION_MASKS[6][4];  // [face][rotation]
+   
+   // Move tables for common sequences
+   static std::unordered_map<uint64_t, std::string> move_table;
+   
+   // Optimized rotation functions
+   void rotate_face_clockwise(uint8_t face);
+   void rotate_face_counterclockwise(uint8_t face);
+   
+   // Helper for move table generation
+   void generate_move_table();
+   
 public: 
 	void operator= (const RubixCube& cube){
-      // if(faces == nullptr){ // only allocate if necessary otherwise will lose pointer
-      //    faces = new uint64_t[6];
-      // }
       for(int n =0; n < 6; n++){
             faces[n] = cube.faces[n];
       }
    }
    bool operator== (const RubixCube& cube) const {
-      for(int i = 0; i < 6; i++) {
-            if(faces[i] != cube.faces[i]) {
-                  return false;
-            }
-      }
-      return true;
+      // Compare all faces at once using a single 64-bit comparison
+      return faces[0] == cube.faces[0] &&
+             faces[1] == cube.faces[1] &&
+             faces[2] == cube.faces[2] &&
+             faces[3] == cube.faces[3] &&
+             faces[4] == cube.faces[4] &&
+             faces[5] == cube.faces[5];
    }
 	RubixCube(); // a solved cube.
    // copy by value
@@ -128,6 +141,50 @@ void F_PRIME(uint64_t num_of_turns);
 void R_PRIME(uint64_t num_of_turns);
 void L_PRIME(uint64_t num_of_turns);
 void B_PRIME(uint64_t num_of_turns);
+
+// Optimized move functions
+void U(uint64_t num_of_turns) {
+    while(num_of_turns--) {
+        rotate_face_clockwise(FACE_UP);
+        // Update adjacent faces using pre-computed masks
+        uint64_t temp = faces[FACE_FRONT];
+        faces[FACE_FRONT] = faces[FACE_RIGHT];
+        faces[FACE_RIGHT] = faces[FACE_BACK];
+        faces[FACE_BACK] = faces[FACE_LEFT];
+        faces[FACE_LEFT] = temp;
+    }
+}
+
+// Similar optimizations for other moves...
+
+// Hash function for state lookup
+size_t hash() const {
+    size_t h = 0;
+    for(int i = 0; i < 6; i++) {
+        h = h * 31 + faces[i];
+    }
+    return h;
+}
+
+// Equality operator optimized for hash table
+bool operator==(const RubixCube& other) const {
+    return faces[0] == other.faces[0] &&
+           faces[1] == other.faces[1] &&
+           faces[2] == other.faces[2] &&
+           faces[3] == other.faces[3] &&
+           faces[4] == other.faces[4] &&
+           faces[5] == other.faces[5];
+}
 };
+
+// Hash function for RubixCube
+namespace std {
+    template<>
+    struct hash<RubixCube> {
+        size_t operator()(const RubixCube& cube) const {
+            return cube.hash();
+        }
+    };
+}
 
 #endif

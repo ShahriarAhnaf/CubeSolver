@@ -554,3 +554,73 @@ void RubixCube::B_PRIME(uint64_t num_of_turns){
 	}
 }
 
+// Pre-computed rotation masks for each face
+const uint64_t RubixCube::ROTATION_MASKS[6][4] = {
+    // Clockwise rotations for each face
+    {0x00000000000000FF, 0x000000000000FF00, 0x0000000000FF0000, 0x00000000FF000000}, // UP
+    {0x00000000000000FF, 0x000000000000FF00, 0x0000000000FF0000, 0x00000000FF000000}, // LEFT
+    {0x00000000000000FF, 0x000000000000FF00, 0x0000000000FF0000, 0x00000000FF000000}, // FRONT
+    {0x00000000000000FF, 0x000000000000FF00, 0x0000000000FF0000, 0x00000000FF000000}, // RIGHT
+    {0x00000000000000FF, 0x000000000000FF00, 0x0000000000FF0000, 0x00000000FF000000}, // BACK
+    {0x00000000000000FF, 0x000000000000FF00, 0x0000000000FF0000, 0x00000000FF000000}  // BOTTOM
+};
+
+// Initialize move table
+std::unordered_map<uint64_t, std::string> RubixCube::move_table;
+
+void RubixCube::rotate_face_clockwise(uint8_t face) {
+    uint64_t& face_value = faces[face];
+    uint64_t new_face = 0;
+    
+    // Rotate using pre-computed masks
+    for(int i = 0; i < 4; i++) {
+        uint64_t mask = ROTATION_MASKS[face][i];
+        uint64_t value = (face_value & mask) >> (i * 8);
+        new_face |= value << ((3-i) * 8);
+    }
+    
+    face_value = new_face;
+}
+
+void RubixCube::rotate_face_counterclockwise(uint8_t face) {
+    uint64_t& face_value = faces[face];
+    uint64_t new_face = 0;
+    
+    // Rotate using pre-computed masks
+    for(int i = 0; i < 4; i++) {
+        uint64_t mask = ROTATION_MASKS[face][i];
+        uint64_t value = (face_value & mask) >> (i * 8);
+        new_face |= value << ((i+1) * 8);
+    }
+    
+    face_value = new_face;
+}
+
+void RubixCube::generate_move_table() {
+    if(!move_table.empty()) return; // Already generated
+    
+    // Generate common move sequences
+    std::vector<std::string> moves = {"U", "U'", "U2", "D", "D'", "D2", 
+                                    "R", "R'", "R2", "L", "L'", "L2",
+                                    "F", "F'", "F2", "B", "B'", "B2"};
+    
+    // Generate sequences up to depth 3
+    for(const auto& m1 : moves) {
+        RubixCube cube;
+        cube.Apply_Moves(cube, m1);
+        move_table[cube.hash()] = m1;
+        
+        for(const auto& m2 : moves) {
+            RubixCube cube2 = cube;
+            cube2.Apply_Moves(cube2, m2);
+            move_table[cube2.hash()] = m1 + " " + m2;
+            
+            for(const auto& m3 : moves) {
+                RubixCube cube3 = cube2;
+                cube3.Apply_Moves(cube3, m3);
+                move_table[cube3.hash()] = m1 + " " + m2 + " " + m3;
+            }
+        }
+    }
+}
+
