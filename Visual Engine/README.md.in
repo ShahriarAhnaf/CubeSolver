@@ -1,0 +1,104 @@
+# Rubik's Cube Visualizer
+
+A 3D visualization engine for the Rubik's Cube solver project.
+
+## Prerequisites
+
+- CMake 3.15 or higher
+- C++17 compatible compiler
+- OpenGL 4.6+
+- GLFW3
+- GLM
+
+## Building the Project
+
+### Basic Build
+
+```bash
+# Create build directory
+mkdir build
+cd build
+
+# Configure with CMake
+cmake ..
+
+# Build the project
+cmake --build .
+```
+
+### Build Options
+
+You can specify the build type using:
+```bash
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+# or
+cmake -DCMAKE_BUILD_TYPE=Release ..
+```
+
+Available build types:
+- Debug: Debug build with symbols
+- Release: Optimized release build
+- RelWithDebInfo: Release build with debug symbols
+- MinSizeRel: Minimum size release build
+
+### Running the Application
+
+After building, you can run the application using:
+```bash
+# From the build directory
+./RubiksCubeVisualizer
+```
+
+Or use the custom run target:
+```bash
+cmake --build . --target run
+```
+
+### Cleaning the Build
+
+To clean the build:
+```bash
+cmake --build . --target clean
+```
+
+Or use the custom clean target:
+```bash
+cmake --build . --target clean-build
+```
+
+## Project Structure
+
+```
+Visual Engine/
+├── include/           # Header files
+├── src/              # Source files
+├── shaders/          # GLSL shader files
+├── CMakeLists.txt    # Build configuration
+└── README.md         # This file
+```
+
+## Controls
+
+- WASD: Move camera
+- Mouse: Look around
+- ESC: Exit application
+
+## Development
+
+### Adding New Files
+
+1. Add source files to the `SOURCES` list in CMakeLists.txt
+2. Add header files to the `HEADERS` list in CMakeLists.txt
+3. Rebuild the project
+
+### Debugging
+
+For debugging, use the Debug build type:
+```bash
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+cmake --build .
+```
+
+## License
+
+[Your License Here] 
