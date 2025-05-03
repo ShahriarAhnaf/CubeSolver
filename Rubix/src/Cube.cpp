@@ -47,19 +47,16 @@ void print_bytes(uint64_t n, int location, int location_y){
 }
 void RubixCube::draw_face(uint8_t face_number, int8_t center_x, int8_t center_y){
 	for(int x=0; x<9;x++) {
-		int mask_shift = 8*x;
-		// account for the eight bytes that you need which means you only need 56 shift max.
-		int eight_byte_shift = 56 - mask_shift;
-		//std::cout << "mask shift and eight shift = " << mask_shift<< " " << eight_byte_shift<<"\nmask cube used"; print_bytes(mask_cube >> mask_shift);
-		uint64_t masked_bytes = faces[face_number] & (mask_cube >> mask_shift);
-		uint64_t eight_bytes = masked_bytes >> (eight_byte_shift);
-		
+		uint64_t color;
 		if(x==8){
-		//print center
-			eight_bytes = face_number; // center = facenumbers
+			//print center
+			color = face_number; // center = facenumbers
+		} else {
+			color = GET_COLOR(faces[face_number], x);
 		}
+		
 		// using mvprintw(line,col,string)
-		switch(eight_bytes){
+		switch(color){
 			case WHITE:
 				mvprintw(center_y + relative_location_center[face_number][1]+ print_relative_mapping[x][1], center_x + relative_location_center[face_number][0] + print_relative_mapping[x][0], "W");
 				break;

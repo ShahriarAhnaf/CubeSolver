@@ -17,4 +17,10 @@ The cube only has one orientation at all times and is defined in Cube.h
     Gonna be a huge case statement prolly
     This finish the second layer 
 - More conditional schemes but with the bottom, looping algorithms until it sticks
+
+
+# Trying out THistlewaith's solving using a simple condition state parameter.
+- using the heuristics of Thistle break into 4 groups and the conditions needed
+- brute force IDFS search with a condition for paratmers
+- progress through the conditions until end.
 VOILA!

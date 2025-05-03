@@ -4,6 +4,24 @@
 #ifndef CUBE_H
 #define CUBE_H
 
+// Macros for bitwise operations
+#define GET_COLOR(face_value, position) ((face_value & (0xFFULL << ((7-position) * 8))) >> ((7-position) * 8))
+#define SET_COLOR(face_value, position, color) (face_value = (face_value & ~(0xFFULL << ((7-position) * 8))) | ((uint64_t)color << ((7-position) * 8)))
+#define GET_EDGE(face_value, edge) GET_COLOR(face_value, edge)
+#define GET_CORNER(face_value, corner) GET_COLOR(face_value, corner)
+#define GET_CENTER(face_value) GET_COLOR(face_value, 8)
+
+// Position indices for better readability
+#define TOP_LEFT 0
+#define TOP 1
+#define TOP_RIGHT 2
+#define RIGHT 3
+#define BOTTOM_RIGHT 4
+#define BOTTOM 5
+#define BOTTOM_LEFT 6
+#define LEFT 7
+#define CENTER 8
+
 	/*
    * The cube is laid out as follows.
    *
@@ -51,8 +69,8 @@
 // index center, x, y
 
    
-   // enums
-enum FACE  {UP, LEFT, FRONT, RIGHT, BACK, DOWN};
+// enums
+enum FACE_ORIENTATION {FACE_UP, FACE_LEFT, FACE_FRONT, FACE_RIGHT, FACE_BACK, FACE_BOTTOM};
 enum COLOR {WHITE, BLUE, RED, GREEN, ORANGE, YELLOW};
 
 class RubixCube{
@@ -68,13 +86,13 @@ public:
             faces[n] = cube.faces[n];
       }
    }
-   bool operator== (const RubixCube& cube){
-      return cube.faces[0] == faces[0] &&
-             cube.faces[1] == faces[1] &&
-             cube.faces[2] == faces[2] &&
-             cube.faces[3] == faces[3] &&
-             cube.faces[4] == faces[4] &&
-             cube.faces[5] == faces[5] ;
+   bool operator== (const RubixCube& cube) const {
+      for(int i = 0; i < 6; i++) {
+            if(faces[i] != cube.faces[i]) {
+                  return false;
+            }
+      }
+      return true;
    }
 	RubixCube(); // a solved cube.
    // copy by value
@@ -89,6 +107,14 @@ public:
 		// if(faces != nullptr) delete[] faces;
 	};
 	
+   // Get face value without modifying the cube
+   uint64_t get_face(uint8_t face_number) const {
+      if(face_number < 6) {
+         return faces[face_number];
+      }
+      return 0xFFFFFFFFFFFFFFFF; // Return all 1's for invalid face numbers
+   }
+
 void draw(int8_t screen_center_x, int8_t screen_center_y);
 void U(uint64_t num_of_turns);
 void D(uint64_t num_of_turns);
