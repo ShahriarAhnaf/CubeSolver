@@ -70,6 +70,22 @@ FetchContent_MakeAvailable(glm)
 
 # Find required packages
 find_package(OpenGL REQUIRED)
+find_package(Curses REQUIRED)
+
+# Add Rubix library
+add_library(RubixLib STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Rubix/src/Cube.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Rubix/src/Solver.cpp
+)
+
+target_include_directories(RubixLib PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Rubix/Inc
+    ${CURSES_INCLUDE_DIRS}
+)
+
+target_link_libraries(RubixLib PUBLIC
+    ${CURSES_LIBRARIES}
+)
 
 # Create executable target
 add_executable(RubiksCubeVisualizer
@@ -86,6 +102,7 @@ target_include_directories(RubiksCubeVisualizer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${glad_SOURCE_DIR}/include
     ${glm_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Rubix/Inc
 )
 
 # Link libraries
@@ -94,6 +111,7 @@ target_link_libraries(RubiksCubeVisualizer PRIVATE
     glfw
     glad
     ${GLM_LIBRARIES}
+    RubixLib
 )
 
 # Copy shader files to build directory
@@ -104,7 +122,7 @@ add_custom_command(TARGET RubiksCubeVisualizer POST_BUILD
 )
 
 # Installation configuration
-install(TARGETS RubiksCubeVisualizer
+install(TARGETS RubiksCubeVisualizer RubixLib
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
