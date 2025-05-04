@@ -108,9 +108,18 @@ void CubeRenderer::render() {
         cubeState.model = glm::rotate(cubeState.model, glm::radians(cubeState.rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
         cubeState.model = glm::scale(cubeState.model, glm::vec3(cubeState.scale));
         
-        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
-        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(cubeState.model));
+        // Set uniforms
+        GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
+        GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
+        GLint projLoc = glGetUniformLocation(shaderProgram, "projection");
+        
+        if (modelLoc == -1 || viewLoc == -1 || projLoc == -1) {
+            std::cerr << "Failed to get uniform locations" << std::endl;
+        }
+        
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(cubeState.model));
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
         
         // Set light properties
         glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
@@ -122,7 +131,9 @@ void CubeRenderer::render() {
         
         // Draw cube
         glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);  // 6 faces * 2 triangles * 3 vertices
+        // CAN BE OPTIMIZED TO DRAW ONLY THE FACES THAT ARE VISIBLE
+        // Draw all vertices (26 pieces * 6 faces * 6 vertices per face)
+        glDrawArrays(GL_TRIANGLES, 0, 26 * 6 * 6);
         glBindVertexArray(0);
         
         // Swap buffers and poll events
@@ -230,73 +241,100 @@ void CubeRenderer::setupCubeGeometry() {
     std::vector<float> vertices;
     std::vector<unsigned int> indices;
     
-    // Cube size
-    const float size = 0.5f;
+    // Cube size (smaller for each piece)
+    const float size = 0.3f;  // Smaller size for each piece
     const float halfSize = size / 2.0f;
+    const float gap = 0.02f;  // Gap between pieces
     
-    // Generate vertices for each face
-    // Each face is a quad with 6 vertices (2 triangles)
-    // Each vertex has position (3), normal (3), and color (3)
+    int pieceCount = 0;
     
-    // Front face (Red)
-    addFace(vertices, indices, 
-        -halfSize, -halfSize, halfSize,   0.0f, 0.0f, 1.0f,   COLORS[0],
-        halfSize, -halfSize, halfSize,    0.0f, 0.0f, 1.0f,   COLORS[0],
-        halfSize, halfSize, halfSize,     0.0f, 0.0f, 1.0f,   COLORS[0],
-        halfSize, halfSize, halfSize,     0.0f, 0.0f, 1.0f,   COLORS[0],
-        -halfSize, halfSize, halfSize,    0.0f, 0.0f, 1.0f,   COLORS[0],
-        -halfSize, -halfSize, halfSize,   0.0f, 0.0f, 1.0f,   COLORS[0]
-    );
+    // Create 27 cubes (3x3x3)
+    for (int x = -1; x <= 1; x++) {
+        for (int y = -1; y <= 1; y++) {
+            for (int z = -1; z <= 1; z++) {
+                // Skip the center piece
+                if (x == 0 && y == 0 && z == 0) continue;
+                
+                pieceCount++;
+                
+                // Calculate position with gaps
+                float posX = x * (size + gap);
+                float posY = y * (size + gap);
+                float posZ = z * (size + gap);
+                
+                // Determine colors for each face
+                glm::vec3 frontColor = (z == 1) ? COLORS[0] : glm::vec3(0.2f);  // Red front
+                glm::vec3 backColor = (z == -1) ? COLORS[4] : glm::vec3(0.2f);  // Orange back
+                glm::vec3 topColor = (y == 1) ? COLORS[5] : glm::vec3(0.2f);    // White top
+                glm::vec3 bottomColor = (y == -1) ? COLORS[3] : glm::vec3(0.2f); // Yellow bottom
+                glm::vec3 rightColor = (x == 1) ? COLORS[2] : glm::vec3(0.2f);   // Blue right
+                glm::vec3 leftColor = (x == -1) ? COLORS[1] : glm::vec3(0.2f);   // Green left
+                
+                // Front face
+                addFace(vertices, indices,
+                    posX - halfSize, posY - halfSize, posZ + halfSize,   0.0f, 0.0f, 1.0f,   frontColor,
+                    posX + halfSize, posY - halfSize, posZ + halfSize,    0.0f, 0.0f, 1.0f,   frontColor,
+                    posX + halfSize, posY + halfSize, posZ + halfSize,     0.0f, 0.0f, 1.0f,   frontColor,
+                    posX + halfSize, posY + halfSize, posZ + halfSize,     0.0f, 0.0f, 1.0f,   frontColor,
+                    posX - halfSize, posY + halfSize, posZ + halfSize,    0.0f, 0.0f, 1.0f,   frontColor,
+                    posX - halfSize, posY - halfSize, posZ + halfSize,   0.0f, 0.0f, 1.0f,   frontColor
+                );
+                
+                // Back face
+                addFace(vertices, indices,
+                    posX - halfSize, posY - halfSize, posZ - halfSize,  0.0f, 0.0f, -1.0f,  backColor,
+                    posX - halfSize, posY + halfSize, posZ - halfSize,   0.0f, 0.0f, -1.0f,  backColor,
+                    posX + halfSize, posY + halfSize, posZ - halfSize,    0.0f, 0.0f, -1.0f,  backColor,
+                    posX + halfSize, posY + halfSize, posZ - halfSize,    0.0f, 0.0f, -1.0f,  backColor,
+                    posX + halfSize, posY - halfSize, posZ - halfSize,   0.0f, 0.0f, -1.0f,  backColor,
+                    posX - halfSize, posY - halfSize, posZ - halfSize,  0.0f, 0.0f, -1.0f,  backColor
+                );
+                
+                // Top face
+                addFace(vertices, indices,
+                    posX - halfSize, posY + halfSize, posZ - halfSize,   0.0f, 1.0f, 0.0f,   topColor,
+                    posX + halfSize, posY + halfSize, posZ - halfSize,    0.0f, 1.0f, 0.0f,   topColor,
+                    posX + halfSize, posY + halfSize, posZ + halfSize,     0.0f, 1.0f, 0.0f,   topColor,
+                    posX + halfSize, posY + halfSize, posZ + halfSize,     0.0f, 1.0f, 0.0f,   topColor,
+                    posX - halfSize, posY + halfSize, posZ + halfSize,    0.0f, 1.0f, 0.0f,   topColor,
+                    posX - halfSize, posY + halfSize, posZ - halfSize,   0.0f, 1.0f, 0.0f,   topColor
+                );
+                
+                // Bottom face
+                addFace(vertices, indices,
+                    posX - halfSize, posY - halfSize, posZ - halfSize,  0.0f, -1.0f, 0.0f,  bottomColor,
+                    posX - halfSize, posY - halfSize, posZ + halfSize,   0.0f, -1.0f, 0.0f,  bottomColor,
+                    posX + halfSize, posY - halfSize, posZ + halfSize,    0.0f, -1.0f, 0.0f,  bottomColor,
+                    posX + halfSize, posY - halfSize, posZ + halfSize,    0.0f, -1.0f, 0.0f,  bottomColor,
+                    posX + halfSize, posY - halfSize, posZ - halfSize,   0.0f, -1.0f, 0.0f,  bottomColor,
+                    posX - halfSize, posY - halfSize, posZ - halfSize,  0.0f, -1.0f, 0.0f,  bottomColor
+                );
+                
+                // Right face
+                addFace(vertices, indices,
+                    posX + halfSize, posY - halfSize, posZ - halfSize,   1.0f, 0.0f, 0.0f,   rightColor,
+                    posX + halfSize, posY + halfSize, posZ - halfSize,    1.0f, 0.0f, 0.0f,   rightColor,
+                    posX + halfSize, posY + halfSize, posZ + halfSize,     1.0f, 0.0f, 0.0f,   rightColor,
+                    posX + halfSize, posY + halfSize, posZ + halfSize,     1.0f, 0.0f, 0.0f,   rightColor,
+                    posX + halfSize, posY - halfSize, posZ + halfSize,    1.0f, 0.0f, 0.0f,   rightColor,
+                    posX + halfSize, posY - halfSize, posZ - halfSize,   1.0f, 0.0f, 0.0f,   rightColor
+                );
+                
+                // Left face
+                addFace(vertices, indices,
+                    posX - halfSize, posY - halfSize, posZ - halfSize,  -1.0f, 0.0f, 0.0f,  leftColor,
+                    posX - halfSize, posY - halfSize, posZ + halfSize,   -1.0f, 0.0f, 0.0f,  leftColor,
+                    posX - halfSize, posY + halfSize, posZ + halfSize,    -1.0f, 0.0f, 0.0f,  leftColor,
+                    posX - halfSize, posY + halfSize, posZ + halfSize,    -1.0f, 0.0f, 0.0f,  leftColor,
+                    posX - halfSize, posY + halfSize, posZ - halfSize,   -1.0f, 0.0f, 0.0f,  leftColor,
+                    posX - halfSize, posY - halfSize, posZ - halfSize,  -1.0f, 0.0f, 0.0f,  leftColor
+                );
+            }
+        }
+    }
     
-    // Back face (Orange)
-    addFace(vertices, indices,
-        -halfSize, -halfSize, -halfSize,  0.0f, 0.0f, -1.0f,  COLORS[4],
-        -halfSize, halfSize, -halfSize,   0.0f, 0.0f, -1.0f,  COLORS[4],
-        halfSize, halfSize, -halfSize,    0.0f, 0.0f, -1.0f,  COLORS[4],
-        halfSize, halfSize, -halfSize,    0.0f, 0.0f, -1.0f,  COLORS[4],
-        halfSize, -halfSize, -halfSize,   0.0f, 0.0f, -1.0f,  COLORS[4],
-        -halfSize, -halfSize, -halfSize,  0.0f, 0.0f, -1.0f,  COLORS[4]
-    );
-    
-    // Top face (White)
-    addFace(vertices, indices,
-        -halfSize, halfSize, -halfSize,   0.0f, 1.0f, 0.0f,   COLORS[5],
-        halfSize, halfSize, -halfSize,    0.0f, 1.0f, 0.0f,   COLORS[5],
-        halfSize, halfSize, halfSize,     0.0f, 1.0f, 0.0f,   COLORS[5],
-        halfSize, halfSize, halfSize,     0.0f, 1.0f, 0.0f,   COLORS[5],
-        -halfSize, halfSize, halfSize,    0.0f, 1.0f, 0.0f,   COLORS[5],
-        -halfSize, halfSize, -halfSize,   0.0f, 1.0f, 0.0f,   COLORS[5]
-    );
-    
-    // Bottom face (Yellow)
-    addFace(vertices, indices,
-        -halfSize, -halfSize, -halfSize,  0.0f, -1.0f, 0.0f,  COLORS[3],
-        -halfSize, -halfSize, halfSize,   0.0f, -1.0f, 0.0f,  COLORS[3],
-        halfSize, -halfSize, halfSize,    0.0f, -1.0f, 0.0f,  COLORS[3],
-        halfSize, -halfSize, halfSize,    0.0f, -1.0f, 0.0f,  COLORS[3],
-        halfSize, -halfSize, -halfSize,   0.0f, -1.0f, 0.0f,  COLORS[3],
-        -halfSize, -halfSize, -halfSize,  0.0f, -1.0f, 0.0f,  COLORS[3]
-    );
-    
-    // Right face (Blue)
-    addFace(vertices, indices,
-        halfSize, -halfSize, -halfSize,   1.0f, 0.0f, 0.0f,   COLORS[2],
-        halfSize, halfSize, -halfSize,    1.0f, 0.0f, 0.0f,   COLORS[2],
-        halfSize, halfSize, halfSize,     1.0f, 0.0f, 0.0f,   COLORS[2],
-        halfSize, halfSize, halfSize,     1.0f, 0.0f, 0.0f,   COLORS[2],
-        halfSize, -halfSize, halfSize,    1.0f, 0.0f, 0.0f,   COLORS[2],
-        halfSize, -halfSize, -halfSize,   1.0f, 0.0f, 0.0f,   COLORS[2]
-    );
-    
-    // Left face (Green)
-    addFace(vertices, indices,
-        -halfSize, -halfSize, -halfSize,  -1.0f, 0.0f, 0.0f,  COLORS[1],
-        -halfSize, -halfSize, halfSize,   -1.0f, 0.0f, 0.0f,  COLORS[1],
-        -halfSize, halfSize, halfSize,    -1.0f, 0.0f, 0.0f,  COLORS[1],
-        -halfSize, halfSize, halfSize,    -1.0f, 0.0f, 0.0f,  COLORS[1],
-        -halfSize, halfSize, -halfSize,   -1.0f, 0.0f, 0.0f,  COLORS[1],
-        -halfSize, -halfSize, -halfSize,  -1.0f, 0.0f, 0.0f,  COLORS[1]
-    );
+    std::cout << "Generated " << pieceCount << " pieces" << std::endl;
+    std::cout << "Total vertices: " << vertices.size() / 9 << std::endl;  // Each vertex has 9 components (3 pos, 3 normal, 3 color)
     
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -359,9 +397,13 @@ void CubeRenderer::addFace(std::vector<float>& vertices, std::vector<unsigned in
 
 void CubeRenderer::setupCamera() {
     // Set up initial camera position and orientation
-    cameraPos = glm::vec3(0.0f, 0.0f, 5.0f);
+    cameraPos = glm::vec3(0.0f, 0.0f, 5.0f);  // Moved further back to see the entire cube
     cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
     cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+    
+    // Initialize cube state
+    cubeState.rotation = glm::vec3(0.0f);
+    cubeState.scale = 1.0f;
 }
 
 void CubeRenderer::handleMouseMovement(double xpos, double ypos) {
