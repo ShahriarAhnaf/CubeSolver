@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Find ncurses package
+find_package(Curses REQUIRED)
+include_directories(${CURSES_INCLUDE_DIRS})
+
 # Build type configuration
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
@@ -25,7 +29,7 @@ include_directories(
 set(SOURCES
     src/Cube.cpp
     src/Solver.cpp
-    main.cpp
+    src/main.cpp
 )
 
 # Add header files
@@ -36,6 +40,7 @@ set(HEADERS
 
 # Create main executable
 add_executable(CubeSolver ${SOURCES} ${HEADERS})
+target_link_libraries(CubeSolver ${CURSES_LIBRARIES})
 
 # Add testing executable if testing is enabled
 option(BUILD_TESTING "Build test executable" ON)
@@ -46,6 +51,7 @@ if(BUILD_TESTING)
         src/Solver.cpp
     )
     target_include_directories(Test_Cube PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Inc)
+    target_link_libraries(Test_Cube ${CURSES_LIBRARIES})
 endif()
 
 # Installation configuration
@@ -90,7 +96,6 @@ message(STATUS "  Testing enabled: ${BUILD_TESTING}")
 
 # Add build instructions to README
 configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/README.md.in
     ${CMAKE_CURRENT_SOURCE_DIR}/README.md
     @ONLY
 ) 

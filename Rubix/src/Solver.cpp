@@ -47,40 +47,27 @@ bool Solver::matches_target(const RubixCube& cube, const TargetState& target) {
 Solver::~Solver(){}
 
 // the current cube is implicitly a reference
-bool Solver::Solve_DFS(RubixCube current_cube, RubixCube target_cube, int depth, std::string& solution, std::string previous_move) {
-    if (depth == 0) {
-        return false;
+std::string Solver::Solve_DFS(RubixCube current_cube, TargetState target_state, std::string Moves, int depth_remaining) {
+    static int DFS_count = 0;
+    // Check if we've reached the target state
+    if (target_state.matches_cube(current_cube)) {
+        return Moves;
     }
-    
-    if (DFS_count++ > MAX_DFS_COUNT) {
-        return false;
+    // CHECK FOR REDUNDANT MOVES TODO
+
+    // If we've reached maximum depth, return empty string
+    if (depth_remaining <= 0) {
+        return "";
     }
-    
-    if (current_cube == target_cube) {
-        return true;
-    }
-    
-    // Try all possible moves
-    std::vector<std::string> moves = {"U", "U'", "U2", "D", "D'", "D2", 
-                                    "R", "R'", "R2", "L", "L'", "L2",
-                                    "F", "F'", "F2", "B", "B'", "B2"};
-    
-    for (const auto& move : moves) {
-        // Skip redundant moves
-        if (is_redundant_move(move, previous_move)) {
-            continue;
-        }
-        
+    DFS_count++;
+    for (const std::string& move : Moveset) {
         RubixCube cube_copy = current_cube;
-        cube_copy.Apply_Moves(cube_copy, move);
+        cube_copy = Apply_Moves(cube_copy, move);
         
-        if (Solve_DFS(cube_copy, target_cube, depth - 1, solution, move)) {
-            solution = move + " " + solution;
-            return true;
-        }
+        return Solve_DFS(cube_copy, target_state, Moves + " " + move, depth_remaining - 1);
     }
-    
-    return false;
+    // never reaching this point as the search space is too large
+    return "";
 }
 
 //returns "" if answer not found
@@ -89,7 +76,7 @@ std::string Solver::Solve_IDFS(RubixCube given_cube, TargetState target_state, i
     DFS_count = 0;
     std::string nice = "";
     for(int n = 1; n < Depth_Limit; n++) {
-        nice = Solve_DFS(given_cube, target_state, "", n, "");
+        nice = Solve_DFS(given_cube, target_state, "", n);
         if(nice != "") break; // exit loop when answer is found
     }
     return nice;
@@ -111,7 +98,7 @@ RubixCube Solver::Apply_Moves(RubixCube &El_cube, std::string leMoves){
             if (Move == "L"){
                 Local_Copy_Cube.L(1);
                 }
-            else if (Move == "LPRIME"){
+            else if (Move == "L'"){
                 Local_Copy_Cube.L_PRIME(1);
                 }
             else if (Move == "L2"){
@@ -120,7 +107,7 @@ RubixCube Solver::Apply_Moves(RubixCube &El_cube, std::string leMoves){
 	        else if (Move == "R"){
                 Local_Copy_Cube.R(1);
                 }
-            else if (Move == "RPRIME"){
+            else if (Move == "R'"){
                 Local_Copy_Cube.R_PRIME(1);
                 } 
             else if (Move == "R2"){
@@ -129,7 +116,7 @@ RubixCube Solver::Apply_Moves(RubixCube &El_cube, std::string leMoves){
             else if (Move == "U"){
                 Local_Copy_Cube.U(1);
                 } 
-            else if (Move == "UPRIME"){
+            else if (Move == "U'"){
                 Local_Copy_Cube.U_PRIME(1);
                 } 
             else if (Move == "U2"){
@@ -138,7 +125,7 @@ RubixCube Solver::Apply_Moves(RubixCube &El_cube, std::string leMoves){
             else if (Move == "D"){
                 Local_Copy_Cube.D(1);
                 }  
-            else if (Move == "DPRIME"){
+            else if (Move == "D'"){
                 Local_Copy_Cube.D_PRIME(1);
                 } 
             else if (Move == "D2"){
@@ -147,7 +134,7 @@ RubixCube Solver::Apply_Moves(RubixCube &El_cube, std::string leMoves){
             else if (Move == "F"){
                 Local_Copy_Cube.F(1);
                 }  
-            else if (Move == "FPRIME"){
+            else if (Move == "F'"){
                 Local_Copy_Cube.F_PRIME(1);
                 } 
             else if (Move == "F2"){
@@ -156,7 +143,7 @@ RubixCube Solver::Apply_Moves(RubixCube &El_cube, std::string leMoves){
             else if (Move == "B"){
                 Local_Copy_Cube.B(1);
                 }  
-            else if (Move == "BPRIME"){
+            else if (Move == "B'"){
                 Local_Copy_Cube.B_PRIME(1);
                 }  
             else if (Move == "B2"){
@@ -276,7 +263,9 @@ bool Solver::has_bottom_layer(RubixCube& cube) {
     return all_yellow && corner0 && corner2 && corner4 && corner6;
 }
 
-void Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
+std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
+    std::string all_moves;
+    
     // Step 1: Solve white cross
     TargetState white_cross_target;
     // Set up white cross target
@@ -306,11 +295,11 @@ void Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
             }
         }
     }
-    white_cross_target.set_face_dont_care(FACE_BOTTOM);
     
     std::string cross_moves = Solve_IDFS(given_cube, white_cross_target, Depth_Limit);
     if(cross_moves != "") {
         given_cube = Apply_Moves(given_cube, cross_moves);
+        all_moves += cross_moves + " ";
     }
 
     // Step 2: Complete white face corners
@@ -350,6 +339,7 @@ void Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
     std::string corner_moves = Solve_IDFS(given_cube, white_corners_target, Depth_Limit);
     if(corner_moves != "") {
         given_cube = Apply_Moves(given_cube, corner_moves);
+        all_moves += corner_moves + " ";
     }
 
     // Step 3: Solve second layer
@@ -385,6 +375,7 @@ void Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
     std::string second_layer_moves = Solve_IDFS(given_cube, second_layer_target, Depth_Limit);
     if(second_layer_moves != "") {
         given_cube = Apply_Moves(given_cube, second_layer_moves);
+        all_moves += second_layer_moves + " ";
     }
 
     // Step 4: Solve bottom layer
@@ -398,7 +389,10 @@ void Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
     std::string bottom_layer_moves = Solve_IDFS(given_cube, solved_target, Depth_Limit);
     if(bottom_layer_moves != "") {
         given_cube = Apply_Moves(given_cube, bottom_layer_moves);
+        all_moves += bottom_layer_moves;
     }
+
+    return all_moves;
 }
 
 // These functions need to be implemented with the actual solving algorithms
@@ -417,7 +411,7 @@ std::string Solver::solve_white_cross(RubixCube& cube) {
         // Edge is already in position
     }
     else if(GET_COLOR(front_face, RIGHT) == WHITE) {
-        moves += "F U R UPRIME FPRIME ";
+        moves += "F U R U' F' ";
         cube.F(1); cube.U(1); cube.R(1); cube.U_PRIME(1); cube.F_PRIME(1);
     }
     else if(GET_COLOR(front_face, BOTTOM) == WHITE) {
@@ -425,13 +419,13 @@ std::string Solver::solve_white_cross(RubixCube& cube) {
         cube.F(2);
     }
     else if(GET_COLOR(front_face, LEFT) == WHITE) {
-        moves += "FPRIME U LPRIME UPRIME F ";
+        moves += "F' U L' U' F ";
         cube.F_PRIME(1); cube.U(1); cube.L_PRIME(1); cube.U_PRIME(1); cube.F(1);
     }
 
     // Check right face
     if(GET_COLOR(right_face, TOP) == WHITE) {
-        moves += "R U F UPRIME RPRIME ";
+        moves += "R U F U' R' ";
         cube.R(1); cube.U(1); cube.F(1); cube.U_PRIME(1); cube.R_PRIME(1);
     }
     else if(GET_COLOR(right_face, RIGHT) == WHITE) {
@@ -442,17 +436,17 @@ std::string Solver::solve_white_cross(RubixCube& cube) {
         cube.R(2);
     }
     else if(GET_COLOR(right_face, LEFT) == WHITE) {
-        moves += "RPRIME U BPRIME UPRIME R ";
+        moves += "R' U B' U' R ";
         cube.R_PRIME(1); cube.U(1); cube.B_PRIME(1); cube.U_PRIME(1); cube.R(1);
     }
 
     // Check back face
     if(GET_COLOR(back_face, TOP) == WHITE) {
-        moves += "B U R UPRIME BPRIME ";
+        moves += "B U R U' B' ";
         cube.B(1); cube.U(1); cube.R(1); cube.U_PRIME(1); cube.B_PRIME(1);
     }
     else if(GET_COLOR(back_face, RIGHT) == WHITE) {
-        moves += "BPRIME U LPRIME UPRIME B ";
+        moves += "B' U L' U' B ";
         cube.B_PRIME(1); cube.U(1); cube.L_PRIME(1); cube.U_PRIME(1); cube.B(1);
     }
     else if(GET_COLOR(back_face, BOTTOM) == WHITE) {
@@ -465,11 +459,11 @@ std::string Solver::solve_white_cross(RubixCube& cube) {
 
     // Check left face
     if(GET_COLOR(left_face, TOP) == WHITE) {
-        moves += "L U B UPRIME LPRIME ";
+        moves += "L U B U' L' ";
         cube.L(1); cube.U(1); cube.B(1); cube.U_PRIME(1); cube.L_PRIME(1);
     }
     else if(GET_COLOR(left_face, RIGHT) == WHITE) {
-        moves += "LPRIME U FPRIME UPRIME L ";
+        moves += "L' U F' U' L ";
         cube.L_PRIME(1); cube.U(1); cube.F_PRIME(1); cube.U_PRIME(1); cube.L(1);
     }
     else if(GET_COLOR(left_face, BOTTOM) == WHITE) {
@@ -522,18 +516,18 @@ std::string Solver::solve_white_corners(RubixCube& cube) {
     if(GET_COLOR(front_face, TOP_LEFT) == WHITE) {
         // Corner is in position, check if it needs to be oriented
         if(GET_COLOR(top_face, TOP_LEFT) != WHITE) {
-            moves += "R U RPRIME ";
+            moves += "R U R' ";
             cube.R(1); cube.U(1); cube.R_PRIME(1);
         }
     }
     // Check bottom-right corner
     else if(GET_COLOR(front_face, BOTTOM_RIGHT) == WHITE) {
-        moves += "R U RPRIME ";
+        moves += "R U R' ";
         cube.R(1); cube.U(1); cube.R_PRIME(1);
     }
     // Check bottom-left corner
     else if(GET_COLOR(front_face, BOTTOM_LEFT) == WHITE) {
-        moves += "LPRIME UPRIME L ";
+        moves += "L' U' L ";
         cube.L_PRIME(1); cube.U_PRIME(1); cube.L(1);
     }
     
@@ -544,18 +538,18 @@ std::string Solver::solve_white_corners(RubixCube& cube) {
     if(GET_COLOR(right_face, TOP_LEFT) == WHITE) {
         // Corner is in position, check if it needs to be oriented
         if(GET_COLOR(top_face, TOP_RIGHT) != WHITE) {
-            moves += "B U BPRIME ";
+            moves += "B U B' ";
             cube.B(1); cube.U(1); cube.B_PRIME(1);
         }
     }
     // Check bottom-right corner
     else if(GET_COLOR(right_face, BOTTOM_RIGHT) == WHITE) {
-        moves += "B U BPRIME ";
+        moves += "B U B' ";
         cube.B(1); cube.U(1); cube.B_PRIME(1);
     }
     // Check bottom-left corner
     else if(GET_COLOR(right_face, BOTTOM_LEFT) == WHITE) {
-        moves += "RPRIME UPRIME R ";
+        moves += "R' U' R ";
         cube.R_PRIME(1); cube.U_PRIME(1); cube.R(1);
     }
     
@@ -566,18 +560,18 @@ std::string Solver::solve_white_corners(RubixCube& cube) {
     if(GET_COLOR(back_face, TOP_LEFT) == WHITE) {
         // Corner is in position, check if it needs to be oriented
         if(GET_COLOR(top_face, BOTTOM_RIGHT) != WHITE) {
-            moves += "L U LPRIME ";
+            moves += "L U L' ";
             cube.L(1); cube.U(1); cube.L_PRIME(1);
         }
     }
     // Check bottom-right corner
     else if(GET_COLOR(back_face, BOTTOM_RIGHT) == WHITE) {
-        moves += "L U LPRIME ";
+        moves += "L U L' ";
         cube.L(1); cube.U(1); cube.L_PRIME(1);
     }
     // Check bottom-left corner
     else if(GET_COLOR(back_face, BOTTOM_LEFT) == WHITE) {
-        moves += "BPRIME UPRIME B ";
+        moves += "B' U' B ";
         cube.B_PRIME(1); cube.U_PRIME(1); cube.B(1);
     }
     
@@ -586,18 +580,18 @@ std::string Solver::solve_white_corners(RubixCube& cube) {
     if(GET_COLOR(left_face, TOP_LEFT) == WHITE) {
         // Corner is in position, check if it needs to be oriented
         if(GET_COLOR(top_face, TOP_LEFT) != WHITE) {
-            moves += "F U FPRIME ";
+            moves += "F U F' ";
             cube.F(1); cube.U(1); cube.F_PRIME(1);
         }
     }
     // Check bottom-right corner
     else if(GET_COLOR(left_face, BOTTOM_RIGHT) == WHITE) {
-        moves += "F U FPRIME ";
+        moves += "F U F' ";
         cube.F(1); cube.U(1); cube.F_PRIME(1);
     }
     // Check bottom-left corner
     else if(GET_COLOR(left_face, BOTTOM_LEFT) == WHITE) {
-        moves += "LPRIME UPRIME L ";
+        moves += "L' U' L ";
         cube.L_PRIME(1); cube.U_PRIME(1); cube.L(1);
     }
     
@@ -610,19 +604,19 @@ std::string Solver::solve_white_corners(RubixCube& cube) {
             // Move the corner to the top
             switch(i) {
                 case 0: // Front-right corner
-                    moves += "R U2 RPRIME ";
+                    moves += "R U2 R' ";
                     cube.R(1); cube.U(2); cube.R_PRIME(1);
                     break;
                 case 1: // Back-right corner
-                    moves += "B U2 BPRIME ";
+                    moves += "B U2 B' ";
                     cube.B(1); cube.U(2); cube.B_PRIME(1);
                     break;
                 case 2: // Back-left corner
-                    moves += "L U2 LPRIME ";
+                    moves += "L U2 L' ";
                     cube.L(1); cube.U(2); cube.L_PRIME(1);
                     break;
                 case 3: // Front-left corner
-                    moves += "F U2 FPRIME ";
+                    moves += "F U2 F' ";
                     cube.F(1); cube.U(2); cube.F_PRIME(1);
                     break;
             }
@@ -648,15 +642,15 @@ std::string Solver::solve_second_layer(RubixCube& cube) {
         // Edge needs to be moved to the second layer
         if(GET_COLOR(right_face, LEFT) == GREEN) {
             // Edge is on the right face, move it to the front
-            moves += "U R UPRIME RPRIME UPRIME FPRIME U F ";
+            moves += "U R U' R' U' F' U F ";
             cube.U(1); cube.R(1); cube.U_PRIME(1); cube.R_PRIME(1); 
             cube.U_PRIME(1); cube.F_PRIME(1); cube.U(1); cube.F(1);
         }
         else if(GET_COLOR(left_face, RIGHT) == GREEN) {
             // Edge is on the left face, move it to the front
-            moves += "UPRIME LPRIME U L U F UPRIME FPRIME ";
-            cube.U_PRIME(1); cube.L_PRIME(1); cube.U(1); cube.L(1);
-            cube.U(1); cube.F(1); cube.U_PRIME(1); cube.F_PRIME(1);
+            moves += "U R U' R' U' F' U F ";
+            cube.U(1); cube.R(1); cube.U_PRIME(1); cube.R_PRIME(1);
+            cube.U_PRIME(1); cube.F_PRIME(1); cube.U(1); cube.F(1);
         }
     }
     
@@ -665,15 +659,15 @@ std::string Solver::solve_second_layer(RubixCube& cube) {
         // Edge needs to be moved to the second layer
         if(GET_COLOR(right_face, RIGHT) == GREEN) {
             // Edge is on the right face, move it to the front
-            moves += "U R UPRIME RPRIME UPRIME FPRIME U F ";
+            moves += "U R U' R' U' F' U F ";
             cube.U(1); cube.R(1); cube.U_PRIME(1); cube.R_PRIME(1);
             cube.U_PRIME(1); cube.F_PRIME(1); cube.U(1); cube.F(1);
         }
         else if(GET_COLOR(left_face, LEFT) == GREEN) {
             // Edge is on the left face, move it to the front
-            moves += "UPRIME LPRIME U L U F UPRIME FPRIME ";
-            cube.U_PRIME(1); cube.L_PRIME(1); cube.U(1); cube.L(1);
-            cube.U(1); cube.F(1); cube.U_PRIME(1); cube.F_PRIME(1);
+            moves += "U R U' R' U' F' U F ";
+            cube.U(1); cube.R(1); cube.U_PRIME(1); cube.R_PRIME(1);
+            cube.U_PRIME(1); cube.F_PRIME(1); cube.U(1); cube.F(1);
         }
     }
     
@@ -685,15 +679,15 @@ std::string Solver::solve_second_layer(RubixCube& cube) {
         // Edge needs to be moved to the second layer
         if(GET_COLOR(front_face, RIGHT) == RED) {
             // Edge is on the front face, move it to the right
-            moves += "U F UPRIME FPRIME UPRIME RPRIME U R ";
+            moves += "U F U' F' U' R' U R ";
             cube.U(1); cube.F(1); cube.U_PRIME(1); cube.F_PRIME(1);
             cube.U_PRIME(1); cube.R_PRIME(1); cube.U(1); cube.R(1);
         }
         else if(GET_COLOR(back_face, LEFT) == RED) {
             // Edge is on the back face, move it to the right
-            moves += "UPRIME BPRIME U B U R UPRIME RPRIME ";
-            cube.U_PRIME(1); cube.B_PRIME(1); cube.U(1); cube.B(1);
-            cube.U(1); cube.R(1); cube.U_PRIME(1); cube.R_PRIME(1);
+            moves += "U F U' F' U' R' U R ";
+            cube.U(1); cube.F(1); cube.U_PRIME(1); cube.F_PRIME(1);
+            cube.U_PRIME(1); cube.R_PRIME(1); cube.U(1); cube.R(1);
         }
     }
     
@@ -703,15 +697,15 @@ std::string Solver::solve_second_layer(RubixCube& cube) {
         // Edge needs to be moved to the second layer
         if(((front_face & 0x0000FF0000000000) >> 40) == ORANGE) {
             // Edge is on the front face, move it to the left
-            moves += "U F UPRIME FPRIME UPRIME LPRIME U L ";
+            moves += "U F U' F' U' L' U L ";
             cube.U(1); cube.F(1); cube.U_PRIME(1); cube.F_PRIME(1);
             cube.U_PRIME(1); cube.L_PRIME(1); cube.U(1); cube.L(1);
         }
         else if(((back_face & 0x0000FF0000000000) >> 40) == ORANGE) {
             // Edge is on the back face, move it to the left
-            moves += "UPRIME BPRIME U B U L UPRIME LPRIME ";
-            cube.U_PRIME(1); cube.B_PRIME(1); cube.U(1); cube.B(1);
-            cube.U(1); cube.L(1); cube.U_PRIME(1); cube.L_PRIME(1);
+            moves += "U F U' F' U' L' U L ";
+            cube.U(1); cube.F(1); cube.U_PRIME(1); cube.F_PRIME(1);
+            cube.U_PRIME(1); cube.L_PRIME(1); cube.U(1); cube.L(1);
         }
     }
     
@@ -720,15 +714,15 @@ std::string Solver::solve_second_layer(RubixCube& cube) {
         // Edge needs to be moved to the second layer
         if(((front_face & 0x000000000000FF00) >> 8) == ORANGE) {
             // Edge is on the front face, move it to the left
-            moves += "U F UPRIME FPRIME UPRIME LPRIME U L ";
+            moves += "U F U' F' U' L' U L ";
             cube.U(1); cube.F(1); cube.U_PRIME(1); cube.F_PRIME(1);
             cube.U_PRIME(1); cube.L_PRIME(1); cube.U(1); cube.L(1);
         }
         else if(((back_face & 0x000000000000FF00) >> 8) == ORANGE) {
             // Edge is on the back face, move it to the left
-            moves += "UPRIME BPRIME U B U L UPRIME LPRIME ";
-            cube.U_PRIME(1); cube.B_PRIME(1); cube.U(1); cube.B(1);
-            cube.U(1); cube.L(1); cube.U_PRIME(1); cube.L_PRIME(1);
+            moves += "U F U' F' U' L' U L ";
+            cube.U(1); cube.F(1); cube.U_PRIME(1); cube.F_PRIME(1);
+            cube.U_PRIME(1); cube.L_PRIME(1); cube.U(1); cube.L(1);
         }
     }
     
@@ -791,9 +785,9 @@ std::string Solver::solve_bottom_cross(RubixCube& cube) {
             }
             
             // Apply the fish algorithm
-            moves += "F R U RPRIME UPRIME FPRIME ";
+            moves += "F R U R' R U2 R' ";
             cube.F(1); cube.R(1); cube.U(1); cube.R_PRIME(1); 
-            cube.U_PRIME(1); cube.F_PRIME(1);
+            cube.U(1); cube.R(1); cube.U(2); cube.R_PRIME(1);
         }
         else {
             // We have an L shape, rotate the cube to get the L in the correct position
@@ -806,29 +800,29 @@ std::string Solver::solve_bottom_cross(RubixCube& cube) {
                 cube.U(2);
             }
             else if(edges[2] && edges[3]) {
-                moves += "UPRIME ";
+                moves += "U' ";
                 cube.U_PRIME(1);
             }
             
             // Apply the fish algorithm
-            moves += "F R U RPRIME UPRIME FPRIME ";
+            moves += "F R U R' R U2 R' ";
             cube.F(1); cube.R(1); cube.U(1); cube.R_PRIME(1); 
-            cube.U_PRIME(1); cube.F_PRIME(1);
+            cube.U(1); cube.R(1); cube.U(2); cube.R_PRIME(1);
         }
     }
     // If we have no yellow edges, we need to create a line
     else if(yellow_edges == 0) {
         // Apply the fish algorithm twice
-        moves += "F R U RPRIME UPRIME FPRIME ";
+        moves += "F R U R' R U2 R' ";
         cube.F(1); cube.R(1); cube.U(1); cube.R_PRIME(1); 
-        cube.U_PRIME(1); cube.F_PRIME(1);
+        cube.U(1); cube.R(1); cube.U(2); cube.R_PRIME(1);
         
         moves += "U2 ";
         cube.U(2);
         
-        moves += "F R U RPRIME UPRIME FPRIME ";
+        moves += "F R U R' R U2 R' ";
         cube.F(1); cube.R(1); cube.U(1); cube.R_PRIME(1); 
-        cube.U_PRIME(1); cube.F_PRIME(1);
+        cube.U(1); cube.R(1); cube.U(2); cube.R_PRIME(1);
     }
     
     return moves;
@@ -886,8 +880,8 @@ std::string Solver::solve_bottom_corners(RubixCube& cube) {
     // If corners are not in the correct position, we need to position them
     if(!corners_correct) {
         // Use the "sexy move" algorithm to position corners
-        moves += "R U RPRIME UPRIME ";
-        cube.R(1); cube.U(1); cube.R_PRIME(1); cube.U_PRIME(1);
+        moves += "R U R' ";
+        cube.R(1); cube.U(1); cube.R_PRIME(1);
         
         // Check if we need to rotate the cube
         if(GET_COLOR(front_face, BOTTOM_RIGHT) == GREEN && 
@@ -902,7 +896,7 @@ std::string Solver::solve_bottom_corners(RubixCube& cube) {
         }
         else if(GET_COLOR(back_face, BOTTOM_RIGHT) == BLUE && 
                 GET_COLOR(left_face, BOTTOM_LEFT) == ORANGE) {
-            moves += "UPRIME ";
+            moves += "U' ";
             cube.U_PRIME(1);
         }
     }
@@ -910,9 +904,8 @@ std::string Solver::solve_bottom_corners(RubixCube& cube) {
     // If corners are not oriented correctly, we need to orient them
     if(!corners_oriented) {
         // Use the "sune" algorithm to orient corners
-        moves += "R U RPRIME U R U2 RPRIME ";
-        cube.R(1); cube.U(1); cube.R_PRIME(1); cube.U(1); 
-        cube.R(1); cube.U(2); cube.R_PRIME(1);
+        moves += "R U R' ";
+        cube.R(1); cube.U(1); cube.R_PRIME(1);
         
         // Check if we need to rotate the cube
         if(GET_COLOR(bottom_face, TOP_LEFT) != YELLOW) {
@@ -924,7 +917,7 @@ std::string Solver::solve_bottom_corners(RubixCube& cube) {
             cube.U(2);
         }
         else if(GET_COLOR(bottom_face, BOTTOM_LEFT) != YELLOW) {
-            moves += "UPRIME ";
+            moves += "U' ";
             cube.U_PRIME(1);
         }
     }

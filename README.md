@@ -4,14 +4,9 @@ A program that will be able to solve a random rubix cube
 Using Rubix Cube notation implementation
 
 ## Project revamped after a long hiatus! 
-- going to be cleaning up first and understanding project
+- New Things!! Using AI for a lot of implementation since I took a nice time to design a bunch of the architecture for how this should go down.
 - 
 
-## How to run and build 
-```
-    cd Rubix 
-    make run 
-```
 - uses rubix cube algorithm notation such as U,F,D,B etc. lowercase of the letter is the normal move, while upper case is prime i.e F is F prime and f is normal f.
 
 ## Future Improvements

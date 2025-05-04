@@ -2,11 +2,23 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <vector>
+#include <cmath>
+
+// Rubik's cube colors
+const glm::vec3 COLORS[] = {
+    glm::vec3(1.0f, 0.0f, 0.0f),  // Red
+    glm::vec3(0.0f, 1.0f, 0.0f),  // Green
+    glm::vec3(0.0f, 0.0f, 1.0f),  // Blue
+    glm::vec3(1.0f, 1.0f, 0.0f),  // Yellow
+    glm::vec3(1.0f, 0.5f, 0.0f),  // Orange
+    glm::vec3(1.0f, 1.0f, 1.0f)   // White
+};
 
 CubeRenderer::CubeRenderer() 
     : window(nullptr), windowWidth(800), windowHeight(600),
       shaderProgram(0), VAO(0), VBO(0), EBO(0),
-      cameraPos(0.0f, 0.0f, 3.0f),
+      cameraPos(0.0f, 0.0f, 5.0f),
       cameraFront(0.0f, 0.0f, -1.0f),
       cameraUp(0.0f, 1.0f, 0.0f),
       yaw(-90.0f), pitch(0.0f),
@@ -77,28 +89,42 @@ bool CubeRenderer::initialize() {
 void CubeRenderer::render() {
     while (!glfwWindowShouldClose(window)) {
         processInput();
-
+        
         // Clear the screen
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+        
         // Use shader program
         glUseProgram(shaderProgram);
-
+        
         // Update uniforms
         glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), 
             (float)windowWidth / (float)windowHeight, 0.1f, 100.0f);
-
+        
+        // Update model matrix with rotation
+        cubeState.model = glm::mat4(1.0f);
+        cubeState.model = glm::rotate(cubeState.model, glm::radians(cubeState.rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+        cubeState.model = glm::rotate(cubeState.model, glm::radians(cubeState.rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+        cubeState.model = glm::scale(cubeState.model, glm::vec3(cubeState.scale));
+        
         glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
         glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(cubeState.model));
-
+        
+        // Set light properties
+        glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+        glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
+        
+        glUniform3fv(glGetUniformLocation(shaderProgram, "lightPos"), 1, glm::value_ptr(lightPos));
+        glUniform3fv(glGetUniformLocation(shaderProgram, "lightColor"), 1, glm::value_ptr(lightColor));
+        glUniform3fv(glGetUniformLocation(shaderProgram, "viewPos"), 1, glm::value_ptr(cameraPos));
+        
         // Draw cube
         glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glDrawArrays(GL_TRIANGLES, 0, 36);  // 6 faces * 2 triangles * 3 vertices
         glBindVertexArray(0);
-
+        
         // Swap buffers and poll events
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -201,42 +227,139 @@ GLuint CubeRenderer::createShader(GLenum type, const std::string& source) {
 }
 
 void CubeRenderer::setupCubeGeometry() {
-    // Cube vertices with positions, normals, and texture coordinates
-    float vertices[] = {
-        // positions          // normals           // texture coords
-        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
-         0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
-        // ... Add remaining cube faces here
-    };
-
+    std::vector<float> vertices;
+    std::vector<unsigned int> indices;
+    
+    // Cube size
+    const float size = 0.5f;
+    const float halfSize = size / 2.0f;
+    
+    // Generate vertices for each face
+    // Each face is a quad with 6 vertices (2 triangles)
+    // Each vertex has position (3), normal (3), and color (3)
+    
+    // Front face (Red)
+    addFace(vertices, indices, 
+        -halfSize, -halfSize, halfSize,   0.0f, 0.0f, 1.0f,   COLORS[0],
+        halfSize, -halfSize, halfSize,    0.0f, 0.0f, 1.0f,   COLORS[0],
+        halfSize, halfSize, halfSize,     0.0f, 0.0f, 1.0f,   COLORS[0],
+        halfSize, halfSize, halfSize,     0.0f, 0.0f, 1.0f,   COLORS[0],
+        -halfSize, halfSize, halfSize,    0.0f, 0.0f, 1.0f,   COLORS[0],
+        -halfSize, -halfSize, halfSize,   0.0f, 0.0f, 1.0f,   COLORS[0]
+    );
+    
+    // Back face (Orange)
+    addFace(vertices, indices,
+        -halfSize, -halfSize, -halfSize,  0.0f, 0.0f, -1.0f,  COLORS[4],
+        -halfSize, halfSize, -halfSize,   0.0f, 0.0f, -1.0f,  COLORS[4],
+        halfSize, halfSize, -halfSize,    0.0f, 0.0f, -1.0f,  COLORS[4],
+        halfSize, halfSize, -halfSize,    0.0f, 0.0f, -1.0f,  COLORS[4],
+        halfSize, -halfSize, -halfSize,   0.0f, 0.0f, -1.0f,  COLORS[4],
+        -halfSize, -halfSize, -halfSize,  0.0f, 0.0f, -1.0f,  COLORS[4]
+    );
+    
+    // Top face (White)
+    addFace(vertices, indices,
+        -halfSize, halfSize, -halfSize,   0.0f, 1.0f, 0.0f,   COLORS[5],
+        halfSize, halfSize, -halfSize,    0.0f, 1.0f, 0.0f,   COLORS[5],
+        halfSize, halfSize, halfSize,     0.0f, 1.0f, 0.0f,   COLORS[5],
+        halfSize, halfSize, halfSize,     0.0f, 1.0f, 0.0f,   COLORS[5],
+        -halfSize, halfSize, halfSize,    0.0f, 1.0f, 0.0f,   COLORS[5],
+        -halfSize, halfSize, -halfSize,   0.0f, 1.0f, 0.0f,   COLORS[5]
+    );
+    
+    // Bottom face (Yellow)
+    addFace(vertices, indices,
+        -halfSize, -halfSize, -halfSize,  0.0f, -1.0f, 0.0f,  COLORS[3],
+        -halfSize, -halfSize, halfSize,   0.0f, -1.0f, 0.0f,  COLORS[3],
+        halfSize, -halfSize, halfSize,    0.0f, -1.0f, 0.0f,  COLORS[3],
+        halfSize, -halfSize, halfSize,    0.0f, -1.0f, 0.0f,  COLORS[3],
+        halfSize, -halfSize, -halfSize,   0.0f, -1.0f, 0.0f,  COLORS[3],
+        -halfSize, -halfSize, -halfSize,  0.0f, -1.0f, 0.0f,  COLORS[3]
+    );
+    
+    // Right face (Blue)
+    addFace(vertices, indices,
+        halfSize, -halfSize, -halfSize,   1.0f, 0.0f, 0.0f,   COLORS[2],
+        halfSize, halfSize, -halfSize,    1.0f, 0.0f, 0.0f,   COLORS[2],
+        halfSize, halfSize, halfSize,     1.0f, 0.0f, 0.0f,   COLORS[2],
+        halfSize, halfSize, halfSize,     1.0f, 0.0f, 0.0f,   COLORS[2],
+        halfSize, -halfSize, halfSize,    1.0f, 0.0f, 0.0f,   COLORS[2],
+        halfSize, -halfSize, -halfSize,   1.0f, 0.0f, 0.0f,   COLORS[2]
+    );
+    
+    // Left face (Green)
+    addFace(vertices, indices,
+        -halfSize, -halfSize, -halfSize,  -1.0f, 0.0f, 0.0f,  COLORS[1],
+        -halfSize, -halfSize, halfSize,   -1.0f, 0.0f, 0.0f,  COLORS[1],
+        -halfSize, halfSize, halfSize,    -1.0f, 0.0f, 0.0f,  COLORS[1],
+        -halfSize, halfSize, halfSize,    -1.0f, 0.0f, 0.0f,  COLORS[1],
+        -halfSize, halfSize, -halfSize,   -1.0f, 0.0f, 0.0f,  COLORS[1],
+        -halfSize, -halfSize, -halfSize,  -1.0f, 0.0f, 0.0f,  COLORS[1]
+    );
+    
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
-
+    glGenBuffers(1, &EBO);
+    
     glBindVertexArray(VAO);
-
+    
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+    
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+    
     // Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
     
     // Normal attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
     
-    // Texture coordinate attribute
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    // Color attribute
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)(6 * sizeof(float)));
     glEnableVertexAttribArray(2);
+}
+
+void CubeRenderer::addFace(std::vector<float>& vertices, std::vector<unsigned int>& indices,
+                         float x1, float y1, float z1, float nx1, float ny1, float nz1, glm::vec3 color1,
+                         float x2, float y2, float z2, float nx2, float ny2, float nz2, glm::vec3 color2,
+                         float x3, float y3, float z3, float nx3, float ny3, float nz3, glm::vec3 color3,
+                         float x4, float y4, float z4, float nx4, float ny4, float nz4, glm::vec3 color4,
+                         float x5, float y5, float z5, float nx5, float ny5, float nz5, glm::vec3 color5,
+                         float x6, float y6, float z6, float nx6, float ny6, float nz6, glm::vec3 color6) {
+    // Add vertices for the first triangle
+    vertices.push_back(x1); vertices.push_back(y1); vertices.push_back(z1);
+    vertices.push_back(nx1); vertices.push_back(ny1); vertices.push_back(nz1);
+    vertices.push_back(color1.r); vertices.push_back(color1.g); vertices.push_back(color1.b);
+    
+    vertices.push_back(x2); vertices.push_back(y2); vertices.push_back(z2);
+    vertices.push_back(nx2); vertices.push_back(ny2); vertices.push_back(nz2);
+    vertices.push_back(color2.r); vertices.push_back(color2.g); vertices.push_back(color2.b);
+    
+    vertices.push_back(x3); vertices.push_back(y3); vertices.push_back(z3);
+    vertices.push_back(nx3); vertices.push_back(ny3); vertices.push_back(nz3);
+    vertices.push_back(color3.r); vertices.push_back(color3.g); vertices.push_back(color3.b);
+    
+    // Add vertices for the second triangle
+    vertices.push_back(x4); vertices.push_back(y4); vertices.push_back(z4);
+    vertices.push_back(nx4); vertices.push_back(ny4); vertices.push_back(nz4);
+    vertices.push_back(color4.r); vertices.push_back(color4.g); vertices.push_back(color4.b);
+    
+    vertices.push_back(x5); vertices.push_back(y5); vertices.push_back(z5);
+    vertices.push_back(nx5); vertices.push_back(ny5); vertices.push_back(nz5);
+    vertices.push_back(color5.r); vertices.push_back(color5.g); vertices.push_back(color5.b);
+    
+    vertices.push_back(x6); vertices.push_back(y6); vertices.push_back(z6);
+    vertices.push_back(nx6); vertices.push_back(ny6); vertices.push_back(nz6);
+    vertices.push_back(color6.r); vertices.push_back(color6.g); vertices.push_back(color6.b);
 }
 
 void CubeRenderer::setupCamera() {
     // Set up initial camera position and orientation
-    cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+    cameraPos = glm::vec3(0.0f, 0.0f, 5.0f);
     cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
     cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 }
@@ -247,29 +370,24 @@ void CubeRenderer::handleMouseMovement(double xpos, double ypos) {
         lastY = ypos;
         firstMouse = false;
     }
-
+    
     float xoffset = xpos - lastX;
     float yoffset = lastY - ypos;
     lastX = xpos;
     lastY = ypos;
-
-    float sensitivity = 0.1f;
+    
+    float sensitivity = 0.5f;
     xoffset *= sensitivity;
     yoffset *= sensitivity;
-
-    yaw += xoffset;
-    pitch += yoffset;
-
-    if (pitch > 89.0f)
-        pitch = 89.0f;
-    if (pitch < -89.0f)
-        pitch = -89.0f;
-
-    glm::vec3 front;
-    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    front.y = sin(glm::radians(pitch));
-    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    cameraFront = glm::normalize(front);
+    
+    cubeState.rotation.y += xoffset;
+    cubeState.rotation.x += yoffset;
+    
+    // Clamp vertical rotation
+    if(cubeState.rotation.x > 89.0f)
+        cubeState.rotation.x = 89.0f;
+    if(cubeState.rotation.x < -89.0f)
+        cubeState.rotation.x = -89.0f;
 }
 
 void CubeRenderer::handleScroll(double xoffset, double yoffset) {

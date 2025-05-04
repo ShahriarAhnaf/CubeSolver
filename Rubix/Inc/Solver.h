@@ -47,18 +47,30 @@ struct TargetState {
     void set_face_dont_care(uint8_t face_index) {
         masks[face_index] = 0;
     }
+
+    // Compare a cube with this target state, respecting don't care masks
+    bool matches_cube(const RubixCube& cube) const {
+        for(int i = 0; i < 6; i++) {
+            uint64_t current_face = cube.get_face(i);
+            // Compare only the bits that are not masked (not don't care)
+            if((current_face & masks[i]) != (faces[i] & masks[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
 };
 
 // RubixCube Solved_Cube = RubixCube();
 class Solver{
 private: 
 	const std::string Moveset[18] = {
-      "L", "LPRIME", "L2",
-	  "R", "RPRIME", "R2",
-      "U", "UPRIME", "U2",
-      "D", "DPRIME", "D2",
-      "F", "FPRIME", "F2",
-      "B", "BPRIME", "B2"
+      "L", "L'", "L2",
+	  "R", "R'", "R2",
+      "U", "U'", "U2",
+      "D", "D'", "D2",
+      "F", "F'", "F2",
+      "B", "B'", "B2"
 	}; 
 
     // Helper function to check if a cube matches a target state
@@ -99,9 +111,12 @@ private:
         return false;
     }
 
+    // DFS count for tracking search progress
+    int dfs_count;
+
 public: 
 	//copy for now, might be useful to pass by ref?
-	Solver(){}
+	Solver() : dfs_count(0) {}
 	// Solver(RubixCube cube){
 	// 	Cube = cube;
 	// }
@@ -109,8 +124,20 @@ public:
 	bool is_Solved(RubixCube cube){
 		return cube == RubixCube(); // matching a solved cube
 	}
-	void Solve_Cube(RubixCube &given_cube, int Depth_Limit);
+	std::string Solve_Cube(RubixCube &given_cube, int Depth_Limit);
 	void visualize_state();
 	void scramble();
 	RubixCube Apply_Moves(RubixCube &El_Cube, std::string leMoves);
+    
+    // Getter for DFS count
+    int get_dfs_count() const { return dfs_count; }
+    
+    // Reset DFS count
+    void reset_dfs_count() { dfs_count = 0; }
+    
+    // Public solving methods for individual layers
+    std::string Solve_White_Cross(RubixCube& cube, int depth_limit);
+    std::string Solve_White_Corners(RubixCube& cube, int depth_limit);
+    std::string Solve_Second_Layer(RubixCube& cube, int depth_limit);
+    std::string Solve_Bottom_Layer(RubixCube& cube, int depth_limit);
 };
