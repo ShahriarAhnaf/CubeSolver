@@ -332,18 +332,25 @@ void CubeRenderer::rotateFace(FACE_ORIENTATION faceIndex, bool clockwise) {
 }
 
 void CubeRenderer::startFaceRotation(FACE_ORIENTATION faceIndex, bool clockwise) {
-    if (!faceRotation.isRotating) {
-        faceRotation.isRotating = true;
-        faceRotation.faceIndex = faceIndex;
-        faceRotation.currentAngle = 0.0f;
-        faceRotation.targetAngle = clockwise ? -90.0f : 90.0f; 
+    // Remove animation setup for now
+    // if (!faceRotation.isRotating) { 
+    //    faceRotation.isRotating = true;
+    //    faceRotation.faceIndex = faceIndex;
+    //    faceRotation.currentAngle = 0.0f;
+    //    faceRotation.targetAngle = clockwise ? -90.0f : 90.0f; 
+    // 
+    //    // Get affected cubelets
+    //    std::vector<int> rotatingIndices = getFaceCubeletIndices(faceIndex);
+    //    for (int index : rotatingIndices) {
+    //        cubelets[index].isRotating = true;
+    //    }
+    // }
 
-        // Get affected cubelets
-        std::vector<int> rotatingIndices = getFaceCubeletIndices(faceIndex);
-        for (int index : rotatingIndices) {
-            cubelets[index].isRotating = true;
-        }
-    }
+    // Directly update the logical cube state and sync colors
+    updateCubeState(faceIndex, clockwise);
+    // syncCubeletColors(); // updateCubeState already calls syncCubeletColors
+
+    std::cout << "DEBUG: Started Face Rotation: " << faceIndex << ", Clockwise: " << clockwise << std::endl;
 }
 
 void CubeRenderer::updateAnimation() {
@@ -351,7 +358,7 @@ void CubeRenderer::updateAnimation() {
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
 
-    // Update cube rotation animation
+    // Update cube rotation animation (mouse/arrow keys)
     if (cubeState.isAnimating) {
         cubeState.animationProgress += deltaTime * cubeState.animationSpeed;
         if (cubeState.animationProgress >= 1.0f) {
@@ -363,6 +370,8 @@ void CubeRenderer::updateAnimation() {
         }
     }
 
+    // --- REMOVE FACE ROTATION ANIMATION LOGIC --- 
+    /*
     // Update face rotation animation
     if (faceRotation.isRotating) {
         float rotationStep = faceRotation.rotationSpeed * deltaTime;
@@ -372,13 +381,15 @@ void CubeRenderer::updateAnimation() {
             // Finalize the face rotation (update logical positions)
             finalizeFaceRotation(faceRotation.faceIndex, faceRotation.targetAngle > 0);
             // Update the Rubik's Cube logic as well
-            updateCubeState(faceRotation.faceIndex, faceRotation.targetAngle > 0);
+            // updateCubeState(faceRotation.faceIndex, faceRotation.targetAngle > 0); // Called directly now
         } else {
             faceRotation.currentAngle += (faceRotation.targetAngle > 0 ? rotationStep : -rotationStep);
         }
         // Animate the face rotation
-        animateFaceRotation(faceRotation.faceIndex, faceRotation.currentAngle);
+        // animateFaceRotation(faceRotation.faceIndex, faceRotation.currentAngle); // Defer animation
     }
+    */
+    // --- END REMOVED BLOCK ---
 }
 
 void CubeRenderer::cleanup() {
@@ -885,71 +896,129 @@ glm::vec3 CubeRenderer::colorFromLogical(COLOR logicalColor) {
 }
 
 void CubeRenderer::syncCubeletColors() {
-    // Map logical faces to cubelet face indices
-    const int logicalToFace[6] = {
-        FACE_UP,     // FACE_UP
-        FACE_LEFT,   // FACE_LEFT
-        FACE_FRONT,  // FACE_FRONT
-        FACE_RIGHT,  // FACE_RIGHT
-        FACE_BACK,   // FACE_BACK
-        FACE_BOTTOM    // FACE_BOTTOM
-    };
+    // Map logical faces to cubelet face indices (This seems unused, face var below is enough)
+    // const int logicalToFace[6] = {
+    //     FACE_UP, FACE_LEFT, FACE_FRONT, FACE_RIGHT, FACE_BACK, FACE_BOTTOM
+    // };
 
     // For each cubelet, set the appropriate colors for visible faces
     for (auto& cubelet : cubelets) {
         const glm::ivec3& pos = cubelet.logicalPos;
         
-        // Set default colors for non-visible faces
-        for (int face = 0; face < 6; face++) {
-            if (!cubelet.visibleFaces[face]) {
-                cubelet.faceColors[face] = glm::vec3(0.2f); // Gray for non-visible faces
+        // Iterate through each potential face of the cubelet
+        for (int face = 0; face < 6; ++face) { 
+            FACE_ORIENTATION currentFace = static_cast<FACE_ORIENTATION>(face);
+
+            // Set non-visible faces to gray
+            if (!cubelet.visibleFaces[currentFace]) {
+                cubelet.faceColors[currentFace] = glm::vec3(0.2f); // Gray for non-visible faces
                 continue;
             }
             
             // For visible faces, determine the color from the Rubik's Cube state
-            int faceIndex = -1;
-            int sticker = -1;
+            int faceIndex = -1; // The face of the RubixCube to query (FACE_UP, FACE_FRONT etc)
+            int stickerIndex = -1; // The sticker index (0-8) on that face
             
-            // Map logical position to face and sticker index
-            // This mapping depends on the specific Rubik's Cube implementation
-            // and might need adjustments
-            if (face == FACE_RIGHT && pos.x == 1) {
-                faceIndex = FACE_RIGHT;
-                // Map (y,z) to sticker index (0-8) for the RIGHT face
-                sticker = (1 - pos.y) * 3 + (1 + pos.z);
+            // Determine faceIndex and stickerIndex based on cubelet position and the face direction
+            switch (currentFace) {
+                case FACE_RIGHT: // +X face of the cubelet
+                    faceIndex = FACE_RIGHT;
+                    // Add specific check for center piece
+                    if (pos.y == 0 && pos.z == 0) {
+                        stickerIndex = 8; // CENTER
+                    } else {
+                        // Map Y and Z to sticker index (0-7) based on Cube.h diagram
+                        // Row determined by Y (1 -> 0, 0 -> 1, -1 -> 2) => (1 - pos.y)
+                        // Col determined by Z (-1 -> 0, 0 -> 1, 1 -> 2) => (1 + pos.z)
+                        stickerIndex = (1 - pos.y) * 3 + (1 + pos.z);
+                    }
+                    break;
+                case FACE_LEFT: // -X face of the cubelet
+                    faceIndex = FACE_LEFT;
+                    // Add specific check for center piece
+                    if (pos.y == 0 && pos.z == 0) {
+                         stickerIndex = 8; // CENTER
+                    } else {
+                        // Map Y and Z to sticker index (0-7)
+                        // Row determined by Y (1 -> 0, 0 -> 1, -1 -> 2) => (1 - pos.y)
+                        // Col determined by Z (1 -> 0, 0 -> 1, -1 -> 2) => (1 - pos.z)
+                        stickerIndex = (1 - pos.y) * 3 + (1 - pos.z);
+                    }
+                    break;
+                case FACE_UP: // +Y face of the cubelet
+                    faceIndex = FACE_UP;
+                    // Map Z and X to sticker index (0-8) based on Cube.h diagram and definitions
+                    if (pos.z == -1) { // Top row (0, 1, 2)
+                        stickerIndex = 1 + pos.x; // Maps x=-1 -> 0, x=0 -> 1, x=1 -> 2
+                    } else if (pos.z == 0) { // Middle row (7, 8, 3)
+                         if (pos.x == -1) stickerIndex = 7; // LEFT
+                         else if (pos.x == 0) stickerIndex = 8; // CENTER
+                         else stickerIndex = 3; // RIGHT
+                    } else { // Bottom row (z=1) -> (6, 5, 4)
+                         if (pos.x == -1) stickerIndex = 6; // BOTTOM_LEFT
+                         else if (pos.x == 0) stickerIndex = 5; // BOTTOM
+                         else stickerIndex = 4; // BOTTOM_RIGHT
+                    }
+                    break;
+                case FACE_BOTTOM: // -Y face of the cubelet
+                    faceIndex = FACE_BOTTOM;
+                     // Map Z and X to sticker index (0-8)
+                    if (pos.z == 1) { // Top row (0, 1, 2) - Note: Z is inverted view relative to UP face diagram
+                        stickerIndex = 1 + pos.x; // Maps x=-1 -> 0, x=0 -> 1, x=1 -> 2
+                    } else if (pos.z == 0) { // Middle row (7, 8, 3)
+                         if (pos.x == -1) stickerIndex = 7; // LEFT
+                         else if (pos.x == 0) stickerIndex = 8; // CENTER
+                         else stickerIndex = 3; // RIGHT
+                    } else { // Bottom row (z=-1) -> (6, 5, 4)
+                         if (pos.x == -1) stickerIndex = 6; // BOTTOM_LEFT
+                         else if (pos.x == 0) stickerIndex = 5; // BOTTOM
+                         else stickerIndex = 4; // BOTTOM_RIGHT
+                    }
+                    break;
+                case FACE_FRONT: // +Z face of the cubelet
+                    faceIndex = FACE_FRONT;
+                    // Map Y and X to sticker index (0-8)
+                     if (pos.y == 1) { // Top row (0, 1, 2)
+                        stickerIndex = 1 + pos.x; // Maps x=-1 -> 0, x=0 -> 1, x=1 -> 2
+                    } else if (pos.y == 0) { // Middle row (7, 8, 3)
+                         if (pos.x == -1) stickerIndex = 7; // LEFT
+                         else if (pos.x == 0) stickerIndex = 8; // CENTER
+                         else stickerIndex = 3; // RIGHT
+                    } else { // Bottom row (y=-1) -> (6, 5, 4)
+                         if (pos.x == -1) stickerIndex = 6; // BOTTOM_LEFT
+                         else if (pos.x == 0) stickerIndex = 5; // BOTTOM
+                         else stickerIndex = 4; // BOTTOM_RIGHT
+                    }
+                    break;
+                 case FACE_BACK: // -Z face of the cubelet
+                    faceIndex = FACE_BACK;
+                     // Map Y and X to sticker index (0-8)
+                     if (pos.y == 1) { // Top row (0, 1, 2) - Note: X is inverted view relative to FRONT face diagram
+                        stickerIndex = 1 - pos.x; // Maps x=1 -> 0, x=0 -> 1, x=-1 -> 2
+                    } else if (pos.y == 0) { // Middle row (7, 8, 3)
+                         if (pos.x == 1) stickerIndex = 7; // LEFT (from back view)
+                         else if (pos.x == 0) stickerIndex = 8; // CENTER
+                         else stickerIndex = 3; // RIGHT (from back view)
+                    } else { // Bottom row (y=-1) -> (6, 5, 4)
+                         if (pos.x == 1) stickerIndex = 6; // BOTTOM_LEFT (from back view)
+                         else if (pos.x == 0) stickerIndex = 5; // BOTTOM
+                         else stickerIndex = 4; // BOTTOM_RIGHT (from back view)
+                    }
+                    break;
             }
-            else if (face == FACE_LEFT && pos.x == -1) {
-                faceIndex = FACE_LEFT;
-                // Map (y,z) to sticker index (0-8) for the LEFT face
-                sticker = (1 - pos.y) * 3 + (1 - pos.z);
-            }
-            else if (face == FACE_UP && pos.y == 1) {
-                faceIndex = FACE_UP;
-                // Map (x,z) to sticker index (0-8) for the UP face
-                sticker = (1 + pos.z) * 3 + (1 + pos.x);
-            }
-            else if (face == FACE_BOTTOM && pos.y == -1) {
-                faceIndex = FACE_BOTTOM;
-                // Map (x,z) to sticker index (0-8) for the DOWN face
-                sticker = (1 - pos.z) * 3 + (1 + pos.x);
-            }
-            else if (face == FACE_FRONT && pos.z == 1) {
-                faceIndex = FACE_FRONT;
-                // Map (x,y) to sticker index (0-8) for the FRONT face
-                sticker = (1 - pos.y) * 3 + (1 + pos.x);
-            }
-            else if (face == FACE_BACK && pos.z == -1) {
-                faceIndex = FACE_BACK;
-                // Map (x,y) to sticker index (0-8) for the BACK face
-                sticker = (1 - pos.y) * 3 + (1 - pos.x);
-            }
-            
-            if (faceIndex >= 0 && sticker >= 0 && sticker < 9) {
+
+            // Get the color from the logical cube state if mapping was successful
+            if (faceIndex != -1 && stickerIndex != -1 && stickerIndex <= 8) { // stickerIndex 8 is center
                 uint64_t faceValue = cube.get_face(faceIndex);
-                COLOR color = static_cast<COLOR>(GET_COLOR(faceValue, sticker));
-                cubelet.faceColors[face] = colorFromLogical(color);
+                COLOR color = static_cast<COLOR>(GET_COLOR(faceValue, stickerIndex));
+                cubelet.faceColors[currentFace] = colorFromLogical(color);
             } else {
-                cubelet.faceColors[face] = glm::vec3(0.2f); // Default gray
+                // Fallback if mapping failed (should not happen for visible faces)
+                cubelet.faceColors[currentFace] = glm::vec3(0.1f, 0.1f, 0.1f); // Dark Gray error color
+                if(cubelet.visibleFaces[currentFace]) {
+                    std::cerr << "Error: Failed to map visible cubelet face to sticker! Face: " << currentFace 
+                              << ", Pos: (" << pos.x << "," << pos.y << "," << pos.z << ")" << std::endl;
+                }
             }
         }
     }
@@ -997,43 +1066,16 @@ void CubeRenderer::updateCubeletGeometry() {
     setupCubeGeometry(); 
 }
 
+// Remove or comment out animation helper functions for now
+/*
 void CubeRenderer::animateFaceRotation(FACE_ORIENTATION faceIndex, float angle) {
-    std::vector<int> indices = getFaceCubeletIndices(faceIndex);
-    glm::vec3 axis;
-    switch (faceIndex) {
-         case FACE_UP:     axis = glm::vec3(0.0f, 1.0f, 0.0f); break;
-         case FACE_LEFT:   axis = glm::vec3(-1.0f, 0.0f, 0.0f); break;
-         case FACE_FRONT:  axis = glm::vec3(0.0f, 0.0f, 1.0f); break;
-         case FACE_RIGHT:  axis = glm::vec3(1.0f, 0.0f, 0.0f); break;
-         case FACE_BACK:   axis = glm::vec3(0.0f, 0.0f, -1.0f); break;
-         case FACE_BOTTOM: axis = glm::vec3(0.0f, -1.0f, 0.0f); break;
-    }
-    glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), glm::radians(angle), axis);
-    for (int index : indices) {
-        cubelets[index].applyRotation(rotation);
-    }
+    // ... implementation ...
 }
 
 void CubeRenderer::finalizeFaceRotation(FACE_ORIENTATION faceIndex, bool clockwise) {
-    updateCubeState(faceIndex, clockwise); // Update logical state
-    // syncCubeletColors calls updateCubeletGeometry which calls setupCubeGeometry
-    // This is inefficient as it rebuilds geometry for every face turn.
-    // We only need to sync colors ideally.
-    syncCubeletColors(); 
-    
-    // Reset rotation state for all cubelets
-    for (auto& cubelet : cubelets) {
-        cubelet.isRotating = false;
-        // Reset individual cubelet rotation matrix - needs spacing!
-        // Let's rely on setupCubeGeometry to handle the base matrix for now.
-        // cubelet.resetRotation(cubeletSize); // Need to calculate spacing correctly here or pass it.
-        // The rotation is applied on top of the base model matrix set by setupCubeGeometry
-        // We need a way to separate base translation/scale from temporary rotation.
-        // For now, setupCubeGeometry rebuilds everything.
-    }
-    
-    // Update VBO is handled by syncCubeletColors -> updateCubeletGeometry -> setupCubeGeometry
+   // ... implementation ...
 }
+*/
 
 std::vector<int> CubeRenderer::getFaceCubeletIndices(FACE_ORIENTATION faceIndex, int layer) {
     std::vector<int> indices;
