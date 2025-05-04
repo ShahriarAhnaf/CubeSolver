@@ -1,7 +1,6 @@
 #pragma once
 #include <stdint.h>
-#include <ncurses.h>
-#include <unordered_map>
+#include <string>
 #ifndef CUBE_H
 #define CUBE_H
 

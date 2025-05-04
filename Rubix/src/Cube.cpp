@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cmath>
 #include <sstream>
+#include <ncurses.h>
 #include "Cube.h"
 
 // faces 0-5
