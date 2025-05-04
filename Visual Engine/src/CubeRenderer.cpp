@@ -4,15 +4,21 @@
 #include <sstream>
 #include <vector>
 #include <cmath>
+#include "../../Rubix/Inc/Cube.h"
 
-// Rubik's cube colors
-const glm::vec3 COLORS[] = {
-    glm::vec3(1.0f, 0.0f, 0.0f),  // Red
-    glm::vec3(0.0f, 1.0f, 0.0f),  // Green
-    glm::vec3(0.0f, 0.0f, 1.0f),  // Blue
-    glm::vec3(1.0f, 1.0f, 0.0f),  // Yellow
-    glm::vec3(1.0f, 0.5f, 0.0f),  // Orange
-    glm::vec3(1.0f, 1.0f, 1.0f)   // White
+// ImGui Includes
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
+// Rubik's cube colors (Order MUST match COLOR enum in Cube.h: WHITE, BLUE, RED, GREEN, ORANGE, YELLOW)
+glm::vec3 CUBE_COLORS[] = {
+    glm::vec3(1.0f, 1.0f, 1.0f),  // WHITE
+    glm::vec3(0.0f, 0.0f, 1.0f),  // BLUE
+    glm::vec3(1.0f, 0.0f, 0.0f),  // RED
+    glm::vec3(0.0f, 1.0f, 0.0f),  // GREEN
+    glm::vec3(1.0f, 0.5f, 0.0f),  // ORANGE
+    glm::vec3(1.0f, 1.0f, 0.0f)   // YELLOW
 };
 
 CubeRenderer::CubeRenderer() 
@@ -22,11 +28,31 @@ CubeRenderer::CubeRenderer()
       cameraFront(0.0f, 0.0f, -1.0f),
       cameraUp(0.0f, 1.0f, 0.0f),
       yaw(-90.0f), pitch(0.0f),
-      firstMouse(true), lastX(windowWidth/2.0f), lastY(windowHeight/2.0f)
+      firstMouse(true), lastX(windowWidth/2.0f), lastY(windowHeight/2.0f),
+      deltaTime(0.0f), lastFrame(0.0f)
 {
     cubeState.model = glm::mat4(1.0f);
     cubeState.rotation = glm::vec3(0.0f);
     cubeState.scale = 1.0f;
+    cubeState.isAnimating = false;
+    cubeState.animationProgress = 0.0f;
+    cubeState.targetRotation = glm::vec3(0.0f);
+    cubeState.animationSpeed = 2.0f;
+    
+    faceRotation.isRotating = false;
+    faceRotation.faceIndex = FACE_FRONT;
+    faceRotation.currentAngle = 0.0f;
+    faceRotation.targetAngle = 0.0f;
+    faceRotation.rotationSpeed = 180.0f; // degrees per second
+
+    // Initialize face colors using CUBE_COLORS based on standard mapping
+    faceColors.resize(6);
+    faceColors[FACE_UP] = CUBE_COLORS[WHITE];       // White
+    faceColors[FACE_LEFT] = CUBE_COLORS[BLUE];      // Blue
+    faceColors[FACE_FRONT] = CUBE_COLORS[RED];      // Red
+    faceColors[FACE_RIGHT] = CUBE_COLORS[GREEN];    // Green
+    faceColors[FACE_BACK] = CUBE_COLORS[ORANGE];   // Orange
+    faceColors[FACE_BOTTOM] = CUBE_COLORS[YELLOW]; // Yellow
 }
 
 CubeRenderer::~CubeRenderer() {
@@ -62,6 +88,7 @@ bool CubeRenderer::initialize() {
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
     glfwSetCursorPosCallback(window, mouseCallback);
     glfwSetScrollCallback(window, scrollCallback);
+    glfwSetMouseButtonCallback(window, mouseButtonCallback); // Register mouse button callback
 
     // Set up OpenGL
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -82,22 +109,86 @@ bool CubeRenderer::initialize() {
     // Set up cube geometry
     setupCubeGeometry();
     setupCamera();
+    initializeCubelets();
+
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsClassic();
+
+    // Setup Platform/Renderer backends
+    const char* glsl_version = "#version 330";
+    // Pass 'false' to prevent ImGui from installing its own callbacks over ours
+    ImGui_ImplGlfw_InitForOpenGL(window, false); 
+    ImGui_ImplOpenGL3_Init(glsl_version);
 
     return true;
 }
 
 void CubeRenderer::render() {
     while (!glfwWindowShouldClose(window)) {
+        // Process Input (already modified to check ImGui capture)
         processInput();
+        updateAnimation();
+
+        // Start the Dear ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        // --- ImGui Window --- 
+        bool geometryNeedsUpdate = false;
+        ImGui::Begin("Cube Controls");
+        
+        // Spacing Slider
+        if (ImGui::SliderFloat("Cubelet Spacing", &cubeletSpacing, 0.0f, 0.1f)) {
+            // Clamp spacing to avoid negative cubelet size
+            const float maxSpacing = 1.0f / 3.0f - 0.001f; // Max spacing before cubelet vanishes
+            cubeletSpacing = glm::clamp(cubeletSpacing, 0.0f, maxSpacing);
+            geometryNeedsUpdate = true; // Need to rebuild geometry if spacing changes
+        }
+
+        // Color Pickers
+        ImGui::Separator();
+        ImGui::Text("Face Colors:");
+        const char* colorNames[] = {"White", "Blue", "Red", "Green", "Orange", "Yellow"};
+        for (int i = 0; i < 6; ++i) {
+            if (ImGui::ColorEdit3(colorNames[i], &CUBE_COLORS[i].x)) {
+                geometryNeedsUpdate = true; // Need to rebuild geometry if colors change
+                 // Update faceColors array as well, since it might be used elsewhere initially
+                 // This assumes the standard face-to-color mapping
+                 if (i == WHITE) faceColors[FACE_UP] = CUBE_COLORS[i];
+                 else if (i == BLUE) faceColors[FACE_LEFT] = CUBE_COLORS[i];
+                 else if (i == RED) faceColors[FACE_FRONT] = CUBE_COLORS[i];
+                 else if (i == GREEN) faceColors[FACE_RIGHT] = CUBE_COLORS[i];
+                 else if (i == ORANGE) faceColors[FACE_BACK] = CUBE_COLORS[i];
+                 else if (i == YELLOW) faceColors[FACE_BOTTOM] = CUBE_COLORS[i];
+            }
+        }
+
+        ImGui::End();
+        // --- End ImGui Window ---
+
+        // If spacing or colors changed, update the logical cube state colors and rebuild geometry
+        if (geometryNeedsUpdate) {
+             syncCubeletColors(); // This calls updateCubeletGeometry -> setupCubeGeometry
+        }
+
         
         // Clear the screen
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
-        // Use shader program
+        // Use shader program for the cube
         glUseProgram(shaderProgram);
         
-        // Update uniforms
+        // Update uniforms (View, Projection, Model for overall cube rotation)
         glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), 
             (float)windowWidth / (float)windowHeight, 0.1f, 100.0f);
@@ -106,36 +197,70 @@ void CubeRenderer::render() {
         cubeState.model = glm::mat4(1.0f);
         cubeState.model = glm::rotate(cubeState.model, glm::radians(cubeState.rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
         cubeState.model = glm::rotate(cubeState.model, glm::radians(cubeState.rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
-        cubeState.model = glm::scale(cubeState.model, glm::vec3(cubeState.scale));
+        cubeState.model = glm::scale(cubeState.model, glm::vec3(cubeState.scale)); // Apply zoom scale
+        
+        // Apply face rotation if active (This part needs careful review)
+        // The current setupCubeGeometry rebuilds the *entire* VBO in world space relative to cube center.
+        // Applying another rotation here might double-rotate things or rotate around the wrong axis.
+        // For now, comment out the direct face rotation matrix application here, as setupCubeGeometry 
+        // positions cubelets based on logicalPos, which is updated by finalizeFaceRotation.
+        /*
+        if (faceRotation.isRotating) {
+            glm::vec3 rotationAxis;
+            // ... switch case for axis ...
+            // This rotation should ideally be applied *per cubelet* based on their group,
+            // not to the entire cubeState.model.
+            // cubeState.model = glm::rotate(cubeState.model, glm::radians(faceRotation.currentAngle), rotationAxis);
+        }
+        */
         
         // Set uniforms
         GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
         GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
         GLint projLoc = glGetUniformLocation(shaderProgram, "projection");
         
-        if (modelLoc == -1 || viewLoc == -1 || projLoc == -1) {
-            std::cerr << "Failed to get uniform locations" << std::endl;
-        }
+        // Check uniform locations... (error handling removed for brevity)
         
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(cubeState.model));
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(cubeState.model)); // Pass the main model matrix
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
         
-        // Set light properties
+        // Set light properties...
         glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
         glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
-        
         glUniform3fv(glGetUniformLocation(shaderProgram, "lightPos"), 1, glm::value_ptr(lightPos));
         glUniform3fv(glGetUniformLocation(shaderProgram, "lightColor"), 1, glm::value_ptr(lightColor));
         glUniform3fv(glGetUniformLocation(shaderProgram, "viewPos"), 1, glm::value_ptr(cameraPos));
         
-        // Draw cube
+        // Draw cubelets (using the potentially updated VBO)
+        // We don't need drawCubelets anymore if setupCubeGeometry draws everything?
+        // Let's bind the VAO and draw directly.
         glBindVertexArray(VAO);
-        // CAN BE OPTIMIZED TO DRAW ONLY THE FACES THAT ARE VISIBLE
-        // Draw all vertices (26 pieces * 6 faces * 6 vertices per face)
-        glDrawArrays(GL_TRIANGLES, 0, 26 * 6 * 6);
-        glBindVertexArray(0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO); // Bind the EBO
         
+        // Calculate the total number of indices from visible faces
+        unsigned int indexCount = 0;
+        unsigned int baseVertex = 0; // Keep track of base vertex for glDrawElementsBaseVertex if needed
+        for (const auto& cubelet : cubelets) {
+            int visibleFaceCount = 0;
+            for (int i = 0; i < 6; ++i) {
+                if (cubelet.visibleFaces[i]) {
+                    visibleFaceCount++;
+                }
+            }
+            indexCount += visibleFaceCount * 6; // 6 indices per visible face
+        }
+
+        if (indexCount > 0) {
+            glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0); 
+        }
+        
+        glBindVertexArray(0); 
+
+        // Rendering ImGui
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
         // Swap buffers and poll events
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -143,21 +268,125 @@ void CubeRenderer::render() {
 }
 
 void CubeRenderer::processInput() {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
+    ImGuiIO& io = ImGui::GetIO();
+    // Only process game input if ImGui doesn't want the keyboard
+    if (!io.WantCaptureKeyboard) {
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+            glfwSetWindowShouldClose(window, true);
 
-    const float cameraSpeed = 0.05f;
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        cameraPos += cameraSpeed * cameraFront;
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        cameraPos -= cameraSpeed * cameraFront;
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        // Camera movement
+        const float cameraSpeed = 0.05f;
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            cameraPos += cameraSpeed * cameraFront;
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            cameraPos -= cameraSpeed * cameraFront;
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+
+        bool faceRotatedThisFrame = false; // Flag to check if a face rotation key was pressed
+        // Number keys 1-6 for face rotation
+        if (!faceRotation.isRotating) { // Only allow new face rotation if one isn't already happening
+            for (int i = 0; i < 6; i++) {
+                if (glfwGetKey(window, GLFW_KEY_1 + i) == GLFW_PRESS) {
+                     // Check if Shift is also pressed for counter-clockwise
+                    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS) {
+                        startFaceRotation(static_cast<FACE_ORIENTATION>(i), false); // Counter-clockwise
+                    } else {
+                        startFaceRotation(static_cast<FACE_ORIENTATION>(i), true);  // Clockwise rotation
+                    }
+                    faceRotatedThisFrame = true;
+                    break; // Process only one key press per frame if multiple are held
+                }
+            }
+        }
+
+        // Cube rotation (only if no face rotation key was pressed this frame and no animation is ongoing)
+        if (!faceRotatedThisFrame && !cubeState.isAnimating && !faceRotation.isRotating) {
+            // Arrow keys for cube rotation
+            if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+                rotateCube(-1.0f, 0.0f);
+            if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+                rotateCube(1.0f, 0.0f);
+            if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+                rotateCube(0.0f, 1.0f);
+            if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+                rotateCube(0.0f, -1.0f);
+        }
+    } // End of (!io.WantCaptureKeyboard) check
+}
+
+void CubeRenderer::rotateCube(float x, float y) {
+    if (!cubeState.isAnimating) {
+        cubeState.targetRotation = cubeState.rotation + glm::vec3(y * 90.0f, x * 90.0f, 0.0f);
+        cubeState.isAnimating = true;
+        cubeState.animationProgress = 0.0f;
+    }
+}
+
+void CubeRenderer::rotateFace(FACE_ORIENTATION faceIndex, bool clockwise) {
+    if (!faceRotation.isRotating) {
+        startFaceRotation(faceIndex, clockwise);
+    }
+}
+
+void CubeRenderer::startFaceRotation(FACE_ORIENTATION faceIndex, bool clockwise) {
+    if (!faceRotation.isRotating) {
+        faceRotation.isRotating = true;
+        faceRotation.faceIndex = faceIndex;
+        faceRotation.currentAngle = 0.0f;
+        faceRotation.targetAngle = clockwise ? -90.0f : 90.0f; 
+
+        // Get affected cubelets
+        std::vector<int> rotatingIndices = getFaceCubeletIndices(faceIndex);
+        for (int index : rotatingIndices) {
+            cubelets[index].isRotating = true;
+        }
+    }
+}
+
+void CubeRenderer::updateAnimation() {
+    float currentFrame = glfwGetTime();
+    deltaTime = currentFrame - lastFrame;
+    lastFrame = currentFrame;
+
+    // Update cube rotation animation
+    if (cubeState.isAnimating) {
+        cubeState.animationProgress += deltaTime * cubeState.animationSpeed;
+        if (cubeState.animationProgress >= 1.0f) {
+            cubeState.rotation = cubeState.targetRotation;
+            cubeState.isAnimating = false;
+        } else {
+            cubeState.rotation = glm::mix(cubeState.rotation, cubeState.targetRotation, 
+                                        cubeState.animationProgress);
+        }
+    }
+
+    // Update face rotation animation
+    if (faceRotation.isRotating) {
+        float rotationStep = faceRotation.rotationSpeed * deltaTime;
+        if (std::abs(faceRotation.currentAngle - faceRotation.targetAngle) <= rotationStep) {
+            faceRotation.currentAngle = faceRotation.targetAngle;
+            faceRotation.isRotating = false;
+            // Finalize the face rotation (update logical positions)
+            finalizeFaceRotation(faceRotation.faceIndex, faceRotation.targetAngle > 0);
+            // Update the Rubik's Cube logic as well
+            updateCubeState(faceRotation.faceIndex, faceRotation.targetAngle > 0);
+        } else {
+            faceRotation.currentAngle += (faceRotation.targetAngle > 0 ? rotationStep : -rotationStep);
+        }
+        // Animate the face rotation
+        animateFaceRotation(faceRotation.faceIndex, faceRotation.currentAngle);
+    }
 }
 
 void CubeRenderer::cleanup() {
+    // Cleanup ImGui
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
     if (VAO != 0) glDeleteVertexArrays(1, &VAO);
     if (VBO != 0) glDeleteBuffers(1, &VBO);
     if (EBO != 0) glDeleteBuffers(1, &EBO);
@@ -241,124 +470,123 @@ void CubeRenderer::setupCubeGeometry() {
     std::vector<float> vertices;
     std::vector<unsigned int> indices;
     
-    // Cube size (smaller for each piece)
-    const float size = 0.3f;  // Smaller size for each piece
-    const float halfSize = size / 2.0f;
-    const float gap = 0.02f;  // Gap between pieces
-    
-    int pieceCount = 0;
-    
-    // Create 27 cubes (3x3x3)
-    for (int x = -1; x <= 1; x++) {
-        for (int y = -1; y <= 1; y++) {
-            for (int z = -1; z <= 1; z++) {
-                // Skip the center piece
-                if (x == 0 && y == 0 && z == 0) continue;
-                
-                pieceCount++;
-                
-                // Calculate position with gaps
-                float posX = x * (size + gap);
-                float posY = y * (size + gap);
-                float posZ = z * (size + gap);
-                
-                // Determine colors for each face
-                glm::vec3 frontColor = (z == 1) ? COLORS[0] : glm::vec3(0.2f);  // Red front
-                glm::vec3 backColor = (z == -1) ? COLORS[4] : glm::vec3(0.2f);  // Orange back
-                glm::vec3 topColor = (y == 1) ? COLORS[5] : glm::vec3(0.2f);    // White top
-                glm::vec3 bottomColor = (y == -1) ? COLORS[3] : glm::vec3(0.2f); // Yellow bottom
-                glm::vec3 rightColor = (x == 1) ? COLORS[2] : glm::vec3(0.2f);   // Blue right
-                glm::vec3 leftColor = (x == -1) ? COLORS[1] : glm::vec3(0.2f);   // Green left
-                
-                // Front face
-                addFace(vertices, indices,
-                    posX - halfSize, posY - halfSize, posZ + halfSize,   0.0f, 0.0f, 1.0f,   frontColor,
-                    posX + halfSize, posY - halfSize, posZ + halfSize,    0.0f, 0.0f, 1.0f,   frontColor,
-                    posX + halfSize, posY + halfSize, posZ + halfSize,     0.0f, 0.0f, 1.0f,   frontColor,
-                    posX + halfSize, posY + halfSize, posZ + halfSize,     0.0f, 0.0f, 1.0f,   frontColor,
-                    posX - halfSize, posY + halfSize, posZ + halfSize,    0.0f, 0.0f, 1.0f,   frontColor,
-                    posX - halfSize, posY - halfSize, posZ + halfSize,   0.0f, 0.0f, 1.0f,   frontColor
-                );
-                
-                // Back face
-                addFace(vertices, indices,
-                    posX - halfSize, posY - halfSize, posZ - halfSize,  0.0f, 0.0f, -1.0f,  backColor,
-                    posX - halfSize, posY + halfSize, posZ - halfSize,   0.0f, 0.0f, -1.0f,  backColor,
-                    posX + halfSize, posY + halfSize, posZ - halfSize,    0.0f, 0.0f, -1.0f,  backColor,
-                    posX + halfSize, posY + halfSize, posZ - halfSize,    0.0f, 0.0f, -1.0f,  backColor,
-                    posX + halfSize, posY - halfSize, posZ - halfSize,   0.0f, 0.0f, -1.0f,  backColor,
-                    posX - halfSize, posY - halfSize, posZ - halfSize,  0.0f, 0.0f, -1.0f,  backColor
-                );
-                
-                // Top face
-                addFace(vertices, indices,
-                    posX - halfSize, posY + halfSize, posZ - halfSize,   0.0f, 1.0f, 0.0f,   topColor,
-                    posX + halfSize, posY + halfSize, posZ - halfSize,    0.0f, 1.0f, 0.0f,   topColor,
-                    posX + halfSize, posY + halfSize, posZ + halfSize,     0.0f, 1.0f, 0.0f,   topColor,
-                    posX + halfSize, posY + halfSize, posZ + halfSize,     0.0f, 1.0f, 0.0f,   topColor,
-                    posX - halfSize, posY + halfSize, posZ + halfSize,    0.0f, 1.0f, 0.0f,   topColor,
-                    posX - halfSize, posY + halfSize, posZ - halfSize,   0.0f, 1.0f, 0.0f,   topColor
-                );
-                
-                // Bottom face
-                addFace(vertices, indices,
-                    posX - halfSize, posY - halfSize, posZ - halfSize,  0.0f, -1.0f, 0.0f,  bottomColor,
-                    posX - halfSize, posY - halfSize, posZ + halfSize,   0.0f, -1.0f, 0.0f,  bottomColor,
-                    posX + halfSize, posY - halfSize, posZ + halfSize,    0.0f, -1.0f, 0.0f,  bottomColor,
-                    posX + halfSize, posY - halfSize, posZ + halfSize,    0.0f, -1.0f, 0.0f,  bottomColor,
-                    posX + halfSize, posY - halfSize, posZ - halfSize,   0.0f, -1.0f, 0.0f,  bottomColor,
-                    posX - halfSize, posY - halfSize, posZ - halfSize,  0.0f, -1.0f, 0.0f,  bottomColor
-                );
-                
-                // Right face
-                addFace(vertices, indices,
-                    posX + halfSize, posY - halfSize, posZ - halfSize,   1.0f, 0.0f, 0.0f,   rightColor,
-                    posX + halfSize, posY + halfSize, posZ - halfSize,    1.0f, 0.0f, 0.0f,   rightColor,
-                    posX + halfSize, posY + halfSize, posZ + halfSize,     1.0f, 0.0f, 0.0f,   rightColor,
-                    posX + halfSize, posY + halfSize, posZ + halfSize,     1.0f, 0.0f, 0.0f,   rightColor,
-                    posX + halfSize, posY - halfSize, posZ + halfSize,    1.0f, 0.0f, 0.0f,   rightColor,
-                    posX + halfSize, posY - halfSize, posZ - halfSize,   1.0f, 0.0f, 0.0f,   rightColor
-                );
-                
-                // Left face
-                addFace(vertices, indices,
-                    posX - halfSize, posY - halfSize, posZ - halfSize,  -1.0f, 0.0f, 0.0f,  leftColor,
-                    posX - halfSize, posY - halfSize, posZ + halfSize,   -1.0f, 0.0f, 0.0f,  leftColor,
-                    posX - halfSize, posY + halfSize, posZ + halfSize,    -1.0f, 0.0f, 0.0f,  leftColor,
-                    posX - halfSize, posY + halfSize, posZ + halfSize,    -1.0f, 0.0f, 0.0f,  leftColor,
-                    posX - halfSize, posY + halfSize, posZ - halfSize,   -1.0f, 0.0f, 0.0f,  leftColor,
-                    posX - halfSize, posY - halfSize, posZ - halfSize,  -1.0f, 0.0f, 0.0f,  leftColor
-                );
-            }
+    const float baseCubeSize = 1.0f; // Base size of the whole 3x3x3 cube
+    const float cubeletSize = baseCubeSize / 3.0f; // Size of one cubelet before spacing
+    const float stickerOffset = 0.001f; // Slight offset for stickers to avoid z-fighting
+    const float actualCubeSize = cubeletSize - cubeletSpacing; // Size of the visible cubelet face
+    const float halfActualSize = actualCubeSize / 2.0f;
+
+    // For each cubelet, add its geometry with the appropriate colors
+    for (int i = 0; i < cubelets.size(); i++) {
+        const Cubelet& cubelet = cubelets[i];
+        
+        // Center position of the cubelet, considering spacing
+        float centerPosX = cubelet.logicalPos.x * cubeletSize;
+        float centerPosY = cubelet.logicalPos.y * cubeletSize;
+        float centerPosZ = cubelet.logicalPos.z * cubeletSize;
+        
+        // Calculate vertex positions relative to the cubelet center
+        float r = centerPosX + halfActualSize;
+        float l = centerPosX - halfActualSize;
+        float u = centerPosY + halfActualSize;
+        float d = centerPosY - halfActualSize;
+        float f = centerPosZ + halfActualSize;
+        float b = centerPosZ - halfActualSize;
+
+        // Add faces with appropriate colors
+        // Right face (+X)
+        if (cubelet.visibleFaces[FACE_RIGHT]) {
+            addFace(vertices, indices,
+                r, d, b,  1.0f, 0.0f, 0.0f, cubelet.faceColors[FACE_RIGHT],
+                r, u, b,  1.0f, 0.0f, 0.0f, cubelet.faceColors[FACE_RIGHT],
+                r, u, f,  1.0f, 0.0f, 0.0f, cubelet.faceColors[FACE_RIGHT],
+                r, u, f,  1.0f, 0.0f, 0.0f, cubelet.faceColors[FACE_RIGHT],
+                r, d, f,  1.0f, 0.0f, 0.0f, cubelet.faceColors[FACE_RIGHT],
+                r, d, b,  1.0f, 0.0f, 0.0f, cubelet.faceColors[FACE_RIGHT]
+            );
+        }
+        // Left face (-X)
+        if (cubelet.visibleFaces[FACE_LEFT]) {
+             addFace(vertices, indices,
+                l, d, b, -1.0f, 0.0f, 0.0f, cubelet.faceColors[FACE_LEFT],
+                l, d, f, -1.0f, 0.0f, 0.0f, cubelet.faceColors[FACE_LEFT],
+                l, u, f, -1.0f, 0.0f, 0.0f, cubelet.faceColors[FACE_LEFT],
+                l, u, f, -1.0f, 0.0f, 0.0f, cubelet.faceColors[FACE_LEFT],
+                l, u, b, -1.0f, 0.0f, 0.0f, cubelet.faceColors[FACE_LEFT],
+                l, d, b, -1.0f, 0.0f, 0.0f, cubelet.faceColors[FACE_LEFT]
+            );
+        }
+        // Top face (+Y)
+        if (cubelet.visibleFaces[FACE_UP]) {
+            addFace(vertices, indices,
+                l, u, b,  0.0f, 1.0f, 0.0f, cubelet.faceColors[FACE_UP],
+                l, u, f,  0.0f, 1.0f, 0.0f, cubelet.faceColors[FACE_UP],
+                r, u, f,  0.0f, 1.0f, 0.0f, cubelet.faceColors[FACE_UP],
+                r, u, f,  0.0f, 1.0f, 0.0f, cubelet.faceColors[FACE_UP],
+                r, u, b,  0.0f, 1.0f, 0.0f, cubelet.faceColors[FACE_UP],
+                l, u, b,  0.0f, 1.0f, 0.0f, cubelet.faceColors[FACE_UP]
+            );
+        }
+        // Bottom face (-Y)
+        if (cubelet.visibleFaces[FACE_BOTTOM]) {
+            addFace(vertices, indices,
+                l, d, b,  0.0f, -1.0f, 0.0f, cubelet.faceColors[FACE_BOTTOM],
+                r, d, b,  0.0f, -1.0f, 0.0f, cubelet.faceColors[FACE_BOTTOM],
+                r, d, f,  0.0f, -1.0f, 0.0f, cubelet.faceColors[FACE_BOTTOM],
+                r, d, f,  0.0f, -1.0f, 0.0f, cubelet.faceColors[FACE_BOTTOM],
+                l, d, f,  0.0f, -1.0f, 0.0f, cubelet.faceColors[FACE_BOTTOM],
+                l, d, b,  0.0f, -1.0f, 0.0f, cubelet.faceColors[FACE_BOTTOM]
+            );
+        }
+        // Front face (+Z)
+        if (cubelet.visibleFaces[FACE_FRONT]) {
+            addFace(vertices, indices,
+                l, d, f,  0.0f, 0.0f, 1.0f, cubelet.faceColors[FACE_FRONT],
+                r, d, f,  0.0f, 0.0f, 1.0f, cubelet.faceColors[FACE_FRONT],
+                r, u, f,  0.0f, 0.0f, 1.0f, cubelet.faceColors[FACE_FRONT],
+                r, u, f,  0.0f, 0.0f, 1.0f, cubelet.faceColors[FACE_FRONT],
+                l, u, f,  0.0f, 0.0f, 1.0f, cubelet.faceColors[FACE_FRONT],
+                l, d, f,  0.0f, 0.0f, 1.0f, cubelet.faceColors[FACE_FRONT]
+            );
+        }
+        // Back face (-Z)
+        if (cubelet.visibleFaces[FACE_BACK]) {
+            addFace(vertices, indices,
+                l, d, b,  0.0f, 0.0f, -1.0f, cubelet.faceColors[FACE_BACK],
+                l, u, b,  0.0f, 0.0f, -1.0f, cubelet.faceColors[FACE_BACK],
+                r, u, b,  0.0f, 0.0f, -1.0f, cubelet.faceColors[FACE_BACK],
+                r, u, b,  0.0f, 0.0f, -1.0f, cubelet.faceColors[FACE_BACK],
+                r, d, b,  0.0f, 0.0f, -1.0f, cubelet.faceColors[FACE_BACK],
+                l, d, b,  0.0f, 0.0f, -1.0f, cubelet.faceColors[FACE_BACK]
+            );
         }
     }
     
-    std::cout << "Generated " << pieceCount << " pieces" << std::endl;
-    std::cout << "Total vertices: " << vertices.size() / 9 << std::endl;  // Each vertex has 9 components (3 pos, 3 normal, 3 color)
-    
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
+    // Create/update OpenGL buffers
+    if (VAO == 0) glGenVertexArrays(1, &VAO);
+    if (VBO == 0) glGenBuffers(1, &VBO);
+    if (EBO == 0) glGenBuffers(1, &EBO);
     
     glBindVertexArray(VAO);
     
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+    // Use GL_DYNAMIC_DRAW because spacing/colors can change frequently
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_DYNAMIC_DRAW);
     
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+    // Indices might change if cubelets become invisible, so use DYNAMIC_DRAW here too? Or keep static?
+    // Let's keep EBO static for now, assuming 27 cubelets always exist, just faces might be hidden.
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW); 
     
-    // Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)0);
+    // Vertex attribute pointers (remain the same)
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)0); // Position
     glEnableVertexAttribArray(0);
-    
-    // Normal attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)(3 * sizeof(float))); // Normal
     glEnableVertexAttribArray(1);
-    
-    // Color attribute
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)(6 * sizeof(float)));
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)(6 * sizeof(float))); // Color
     glEnableVertexAttribArray(2);
+
+    glBindVertexArray(0); // Unbind VAO
 }
 
 void CubeRenderer::addFace(std::vector<float>& vertices, std::vector<unsigned int>& indices,
@@ -393,6 +621,15 @@ void CubeRenderer::addFace(std::vector<float>& vertices, std::vector<unsigned in
     vertices.push_back(x6); vertices.push_back(y6); vertices.push_back(z6);
     vertices.push_back(nx6); vertices.push_back(ny6); vertices.push_back(nz6);
     vertices.push_back(color6.r); vertices.push_back(color6.g); vertices.push_back(color6.b);
+    
+    // Add indices for the triangles
+    size_t baseIndex = vertices.size() / 9 - 6;  // Each vertex has 9 components
+    indices.push_back(baseIndex);
+    indices.push_back(baseIndex + 1);
+    indices.push_back(baseIndex + 2);
+    indices.push_back(baseIndex + 3);
+    indices.push_back(baseIndex + 4);
+    indices.push_back(baseIndex + 5);
 }
 
 void CubeRenderer::setupCamera() {
@@ -434,6 +671,9 @@ void CubeRenderer::handleMouseMovement(double xpos, double ypos) {
 
 void CubeRenderer::handleScroll(double xoffset, double yoffset) {
     // Implement zoom functionality
+    float zoomSpeed = 0.1f;
+    float zoom = yoffset * zoomSpeed;
+    cubeState.scale = glm::clamp(cubeState.scale + zoom, 0.1f, 2.0f);
 }
 
 void CubeRenderer::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
@@ -441,15 +681,393 @@ void CubeRenderer::framebufferSizeCallback(GLFWwindow* window, int width, int he
 }
 
 void CubeRenderer::mouseCallback(GLFWwindow* window, double xpos, double ypos) {
+    std::cout << "DEBUG: Mouse callback entered." << std::endl; // Check if it's called
     CubeRenderer* renderer = static_cast<CubeRenderer*>(glfwGetWindowUserPointer(window));
-    if (renderer) {
-        renderer->handleMouseMovement(xpos, ypos);
+    if (!renderer) {
+         std::cerr << "ERROR: Renderer pointer is null in mouseCallback!" << std::endl;
+         return;
     }
+    std::cout << "DEBUG: Renderer pointer OK." << std::endl;
+
+    // Now try accessing ImGui
+    std::cout << "DEBUG: Accessing ImGui::GetIO()..." << std::endl;
+    ImGuiIO& io = ImGui::GetIO(); // Is this the crashing line?
+    std::cout << "DEBUG: ImGui::GetIO() OK." << std::endl;
+
+    if (io.WantCaptureMouse) {
+        std::cout << "DEBUG: ImGui wants mouse capture." << std::endl;
+        ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
+        std::cout << "DEBUG: ImGui_ImplGlfw_CursorPosCallback called." << std::endl;
+        return;
+    }
+    std::cout << "DEBUG: ImGui does NOT want mouse capture." << std::endl;
+
+    renderer->handleMouseMovement(xpos, ypos);
+    std::cout << "DEBUG: Mouse callback exited normally." << std::endl;
 }
 
 void CubeRenderer::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.WantCaptureMouse) {
+        // Forward event to ImGui's handler WHEN it wants capture
+        ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset); 
+        return; // Don't process it in our application
+    }
+
+    // If ImGui doesn't want capture, process it normally
     CubeRenderer* renderer = static_cast<CubeRenderer*>(glfwGetWindowUserPointer(window));
     if (renderer) {
         renderer->handleScroll(xoffset, yoffset);
     }
+}
+
+void CubeRenderer::updateCubeState(FACE_ORIENTATION faceIndex, bool clockwise) {
+    switch (faceIndex) {
+        case FACE_UP:
+            clockwise ? cube.U(1) : cube.U_PRIME(1);
+            break;
+        case FACE_LEFT:
+            clockwise ? cube.L(1) : cube.L_PRIME(1);
+            break;
+        case FACE_FRONT:
+            clockwise ? cube.F(1) : cube.F_PRIME(1);
+            break;
+        case FACE_RIGHT:
+            clockwise ? cube.R(1) : cube.R_PRIME(1);
+            break;
+        case FACE_BACK:
+            clockwise ? cube.B(1) : cube.B_PRIME(1);
+            break;
+        case FACE_BOTTOM:
+            clockwise ? cube.D(1) : cube.D_PRIME(1);
+            break;
+    }
+    syncCubeletColors();
+}
+
+void CubeRenderer::updateFaceColors() {
+    // Get the current vertex data
+    std::vector<float> vertices;
+    std::vector<unsigned int> indices;
+    
+    // Cube size (smaller for each piece)
+    const float size = 0.3f;  // Smaller size for each piece
+    const float halfSize = size / 2.0f;
+    const float gap = 0.02f;  // Gap between pieces
+    
+    // Create 27 cubes (3x3x3)
+    for (int x = -1; x <= 1; x++) {
+        for (int y = -1; y <= 1; y++) {
+            for (int z = -1; z <= 1; z++) {
+                // Skip the center piece
+                if (x == 0 && y == 0 && z == 0) continue;
+                
+                // Calculate position with gaps
+                float posX = x * (size + gap);
+                float posY = y * (size + gap);
+                float posZ = z * (size + gap);
+                
+                // Get colors from the cube state
+                glm::vec3 frontColor = (z == 1) ? faceColors[FACE_FRONT] : glm::vec3(0.2f);
+                glm::vec3 backColor = (z == -1) ? faceColors[FACE_BACK] : glm::vec3(0.2f);
+                glm::vec3 topColor = (y == 1) ? faceColors[FACE_UP] : glm::vec3(0.2f);
+                glm::vec3 bottomColor = (y == -1) ? faceColors[FACE_BOTTOM] : glm::vec3(0.2f);
+                glm::vec3 rightColor = (x == 1) ? faceColors[FACE_RIGHT] : glm::vec3(0.2f);
+                glm::vec3 leftColor = (x == -1) ? faceColors[FACE_LEFT] : glm::vec3(0.2f);
+                
+                // Add faces with updated colors
+                addFace(vertices, indices,
+                    posX - halfSize, posY - halfSize, posZ + halfSize,   0.0f, 0.0f, 1.0f,   frontColor,
+                    posX + halfSize, posY - halfSize, posZ + halfSize,    0.0f, 0.0f, 1.0f,   frontColor,
+                    posX + halfSize, posY + halfSize, posZ + halfSize,     0.0f, 0.0f, 1.0f,   frontColor,
+                    posX + halfSize, posY + halfSize, posZ + halfSize,     0.0f, 0.0f, 1.0f,   frontColor,
+                    posX - halfSize, posY + halfSize, posZ + halfSize,    0.0f, 0.0f, 1.0f,   frontColor,
+                    posX - halfSize, posY - halfSize, posZ + halfSize,   0.0f, 0.0f, 1.0f,   frontColor
+                );
+                
+                // Add other faces similarly...
+                // (Back, Top, Bottom, Right, Left faces)
+            }
+        }
+    }
+    
+    // Update the VBO with new vertex data
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+    
+    // Update the EBO with new index data
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+}
+
+int CubeRenderer::visualToLogicalFace(int visualFace) {
+    // This mapping might need to change based on camera or cube orientation
+    // Example: If visual front (0) corresponds to logical FRONT
+    // This function might become unnecessary if inputs directly use FACE_ORIENTATION
+    switch (visualFace) {
+        case 0: return FACE_FRONT;  // Assuming visual 0 = Front
+        case 1: return FACE_BACK;   // Assuming visual 1 = Back
+        case 2: return FACE_LEFT;   // Assuming visual 2 = Left
+        case 3: return FACE_RIGHT;  // Assuming visual 3 = Right
+        case 4: return FACE_UP;     // Assuming visual 4 = Up
+        case 5: return FACE_BOTTOM; // Assuming visual 5 = Bottom
+        default: return -1; // Invalid
+    }
+}
+
+int CubeRenderer::logicalToVisualFace(int logicalFace) {
+    // Inverse of visualToLogicalFace
+    // Might also become unnecessary
+    switch (static_cast<FACE_ORIENTATION>(logicalFace)) {
+        case FACE_FRONT: return 0;
+        case FACE_BACK:  return 1;
+        case FACE_LEFT:  return 2;
+        case FACE_RIGHT: return 3;
+        case FACE_UP:    return 4;
+        case FACE_BOTTOM:return 5;
+        default: return -1;
+    }
+}
+
+void CubeRenderer::initializeCubelets() {
+    cubelets.clear();
+    cubelets.resize(27);
+    int idx = 0;
+    const float baseCubeSize = 1.0f; // Must match setupCubeGeometry
+    const float cubeletSize = baseCubeSize / 3.0f;
+
+    for (int x = -1; x <= 1; ++x) {
+        for (int y = -1; y <= 1; ++y) {
+            for (int z = -1; z <= 1; ++z) {
+                Cubelet& cubie = cubelets[idx]; // Get reference
+                cubie.logicalPos = glm::ivec3(x, y, z);
+                // Set initial model matrix based on logical position and CURRENT spacing
+                cubie.modelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z) * cubeletSize); 
+                cubie.index = idx++;
+                cubie.isRotating = false;
+                
+                // Determine which faces are visible (on the outside of the cube)
+                cubie.visibleFaces[FACE_RIGHT] = (x == 1);
+                cubie.visibleFaces[FACE_LEFT] = (x == -1);
+                cubie.visibleFaces[FACE_UP] = (y == 1);
+                cubie.visibleFaces[FACE_BOTTOM] = (y == -1);
+                cubie.visibleFaces[FACE_FRONT] = (z == 1);
+                cubie.visibleFaces[FACE_BACK] = (z == -1);
+                
+                // Set default colors (will be updated in syncCubeletColors)
+                std::fill(cubie.faceColors.begin(), cubie.faceColors.end(), glm::vec3(0.2f));
+            }
+        }
+    }
+    
+    // Sync cubelet colors with the Rubik's Cube state
+    syncCubeletColors(); // This calls updateCubeletGeometry which calls setupCubeGeometry
+}
+
+bool CubeRenderer::isFaceVisible(const glm::ivec3& pos, FACE_ORIENTATION faceIndex) {
+    switch (faceIndex) {
+        case FACE_FRONT:  return pos.z == 1;
+        case FACE_BACK:   return pos.z == -1;
+        case FACE_LEFT:   return pos.x == -1;
+        case FACE_RIGHT:  return pos.x == 1;
+        case FACE_UP:     return pos.y == 1;
+        case FACE_BOTTOM: return pos.y == -1;
+        default:          return false;
+    }
+}
+
+glm::vec3 CubeRenderer::colorFromLogical(COLOR logicalColor) {
+    // New implementation using CUBE_COLORS array
+    if (logicalColor >= WHITE && logicalColor <= YELLOW) {
+        return CUBE_COLORS[logicalColor];
+    }
+    return glm::vec3(0.2f, 0.2f, 0.2f); // Default gray for invalid colors
+}
+
+void CubeRenderer::syncCubeletColors() {
+    // Map logical faces to cubelet face indices
+    const int logicalToFace[6] = {
+        FACE_UP,     // FACE_UP
+        FACE_LEFT,   // FACE_LEFT
+        FACE_FRONT,  // FACE_FRONT
+        FACE_RIGHT,  // FACE_RIGHT
+        FACE_BACK,   // FACE_BACK
+        FACE_BOTTOM    // FACE_BOTTOM
+    };
+
+    // For each cubelet, set the appropriate colors for visible faces
+    for (auto& cubelet : cubelets) {
+        const glm::ivec3& pos = cubelet.logicalPos;
+        
+        // Set default colors for non-visible faces
+        for (int face = 0; face < 6; face++) {
+            if (!cubelet.visibleFaces[face]) {
+                cubelet.faceColors[face] = glm::vec3(0.2f); // Gray for non-visible faces
+                continue;
+            }
+            
+            // For visible faces, determine the color from the Rubik's Cube state
+            int faceIndex = -1;
+            int sticker = -1;
+            
+            // Map logical position to face and sticker index
+            // This mapping depends on the specific Rubik's Cube implementation
+            // and might need adjustments
+            if (face == FACE_RIGHT && pos.x == 1) {
+                faceIndex = FACE_RIGHT;
+                // Map (y,z) to sticker index (0-8) for the RIGHT face
+                sticker = (1 - pos.y) * 3 + (1 + pos.z);
+            }
+            else if (face == FACE_LEFT && pos.x == -1) {
+                faceIndex = FACE_LEFT;
+                // Map (y,z) to sticker index (0-8) for the LEFT face
+                sticker = (1 - pos.y) * 3 + (1 - pos.z);
+            }
+            else if (face == FACE_UP && pos.y == 1) {
+                faceIndex = FACE_UP;
+                // Map (x,z) to sticker index (0-8) for the UP face
+                sticker = (1 + pos.z) * 3 + (1 + pos.x);
+            }
+            else if (face == FACE_BOTTOM && pos.y == -1) {
+                faceIndex = FACE_BOTTOM;
+                // Map (x,z) to sticker index (0-8) for the DOWN face
+                sticker = (1 - pos.z) * 3 + (1 + pos.x);
+            }
+            else if (face == FACE_FRONT && pos.z == 1) {
+                faceIndex = FACE_FRONT;
+                // Map (x,y) to sticker index (0-8) for the FRONT face
+                sticker = (1 - pos.y) * 3 + (1 + pos.x);
+            }
+            else if (face == FACE_BACK && pos.z == -1) {
+                faceIndex = FACE_BACK;
+                // Map (x,y) to sticker index (0-8) for the BACK face
+                sticker = (1 - pos.y) * 3 + (1 - pos.x);
+            }
+            
+            if (faceIndex >= 0 && sticker >= 0 && sticker < 9) {
+                uint64_t faceValue = cube.get_face(faceIndex);
+                COLOR color = static_cast<COLOR>(GET_COLOR(faceValue, sticker));
+                cubelet.faceColors[face] = colorFromLogical(color);
+            } else {
+                cubelet.faceColors[face] = glm::vec3(0.2f); // Default gray
+            }
+        }
+    }
+    
+    // Update the geometry with new colors
+    updateCubeletGeometry();
+}
+
+void CubeRenderer::drawCubelets(const glm::mat4& view, const glm::mat4& projection) {
+    glUseProgram(shaderProgram);
+    GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
+    GLint projLoc = glGetUniformLocation(shaderProgram, "projection");
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+    
+    // We need to set the main model matrix uniform here once
+    GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(cubeState.model));
+
+    glBindVertexArray(VAO); // Bind the single VAO
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO); // Bind the EBO
+    
+    // Calculate the total number of indices from visible faces
+    unsigned int indexCount = 0;
+    unsigned int baseVertex = 0; // Keep track of base vertex for glDrawElementsBaseVertex if needed
+    for (const auto& cubelet : cubelets) {
+        int visibleFaceCount = 0;
+        for (int i = 0; i < 6; ++i) {
+            if (cubelet.visibleFaces[i]) {
+                visibleFaceCount++;
+            }
+        }
+        indexCount += visibleFaceCount * 6; // 6 indices per visible face
+    }
+
+    if (indexCount > 0) {
+        glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0); 
+    }
+    
+    glBindVertexArray(0); 
+}
+
+void CubeRenderer::updateCubeletGeometry() {
+    // Rebuild the entire VBO/EBO based on current cubelet state (colors) and spacing
+    setupCubeGeometry(); 
+}
+
+void CubeRenderer::animateFaceRotation(FACE_ORIENTATION faceIndex, float angle) {
+    std::vector<int> indices = getFaceCubeletIndices(faceIndex);
+    glm::vec3 axis;
+    switch (faceIndex) {
+         case FACE_UP:     axis = glm::vec3(0.0f, 1.0f, 0.0f); break;
+         case FACE_LEFT:   axis = glm::vec3(-1.0f, 0.0f, 0.0f); break;
+         case FACE_FRONT:  axis = glm::vec3(0.0f, 0.0f, 1.0f); break;
+         case FACE_RIGHT:  axis = glm::vec3(1.0f, 0.0f, 0.0f); break;
+         case FACE_BACK:   axis = glm::vec3(0.0f, 0.0f, -1.0f); break;
+         case FACE_BOTTOM: axis = glm::vec3(0.0f, -1.0f, 0.0f); break;
+    }
+    glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), glm::radians(angle), axis);
+    for (int index : indices) {
+        cubelets[index].applyRotation(rotation);
+    }
+}
+
+void CubeRenderer::finalizeFaceRotation(FACE_ORIENTATION faceIndex, bool clockwise) {
+    updateCubeState(faceIndex, clockwise); // Update logical state
+    // syncCubeletColors calls updateCubeletGeometry which calls setupCubeGeometry
+    // This is inefficient as it rebuilds geometry for every face turn.
+    // We only need to sync colors ideally.
+    syncCubeletColors(); 
+    
+    // Reset rotation state for all cubelets
+    for (auto& cubelet : cubelets) {
+        cubelet.isRotating = false;
+        // Reset individual cubelet rotation matrix - needs spacing!
+        // Let's rely on setupCubeGeometry to handle the base matrix for now.
+        // cubelet.resetRotation(cubeletSize); // Need to calculate spacing correctly here or pass it.
+        // The rotation is applied on top of the base model matrix set by setupCubeGeometry
+        // We need a way to separate base translation/scale from temporary rotation.
+        // For now, setupCubeGeometry rebuilds everything.
+    }
+    
+    // Update VBO is handled by syncCubeletColors -> updateCubeletGeometry -> setupCubeGeometry
+}
+
+std::vector<int> CubeRenderer::getFaceCubeletIndices(FACE_ORIENTATION faceIndex, int layer) {
+    std::vector<int> indices;
+    for (int i = 0; i < 27; ++i) {
+        glm::ivec3 pos = cubelets[i].logicalPos;
+        bool match = false;
+        switch (faceIndex) {
+            case FACE_UP:     match = (pos.y == 1); break;
+            case FACE_LEFT:   match = (pos.x == -1); break;
+            case FACE_FRONT:  match = (pos.z == 1); break;
+            case FACE_RIGHT:  match = (pos.x == 1); break;
+            case FACE_BACK:   match = (pos.z == -1); break;
+            case FACE_BOTTOM: match = (pos.y == -1); break;
+        }
+        if (match) {
+            indices.push_back(i);
+        }
+    }
+    return indices;
+}
+
+// Implement the mouse button callback function
+void CubeRenderer::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.WantCaptureMouse) {
+        // Forward event to ImGui's handler WHEN it wants capture
+        ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
+        return; // Don't process it in our application
+    }
+
+    // If ImGui doesn't want capture, handle game-specific logic here (if any)
+    // std::cout << "DEBUG: Mouse button event not captured by ImGui: " << button << ", " << action << std::endl;
+    // CubeRenderer* renderer = static_cast<CubeRenderer*>(glfwGetWindowUserPointer(window));
+    // if (renderer) {
+    //    renderer->handleMouseButton(button, action, mods); // Example game handler
+    // }
 } 

@@ -68,6 +68,16 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glm)
 
+# Fetch ImGui
+FetchContent_Declare(
+    imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG v1.89.9 # Use a specific tag (e.g., v1.89.9) or docking branch for docking support
+    # GIT_TAG docking # Uncomment this and comment above line for docking branch
+)
+set(IMGUI_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # Don't build ImGui examples
+FetchContent_MakeAvailable(imgui)
+
 # Find required packages
 find_package(OpenGL REQUIRED)
 find_package(Curses REQUIRED)
@@ -94,6 +104,16 @@ add_executable(RubiksCubeVisualizer
     include/CubeRenderer.h
 )
 
+# Add ImGui source files directly to the executable target
+target_sources(RubiksCubeVisualizer PRIVATE
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+)
+
 # Set target properties
 target_include_directories(RubiksCubeVisualizer PRIVATE
     ${OPENGL_INCLUDE_DIR}
@@ -103,6 +123,8 @@ target_include_directories(RubiksCubeVisualizer PRIVATE
     ${glad_SOURCE_DIR}/include
     ${glm_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../Rubix/Inc
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
 )
 
 # Link libraries
@@ -153,4 +175,4 @@ configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/README.md.in
     ${CMAKE_CURRENT_SOURCE_DIR}/README.md
     @ONLY
-) 
+)

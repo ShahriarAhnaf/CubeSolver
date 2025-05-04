@@ -162,6 +162,19 @@ depend:
 .PHONY : depend
 
 #=============================================================================
+# Target rules for targets named RubixLib
+
+# Build rule for target.
+RubixLib: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 RubixLib
+.PHONY : RubixLib
+
+# fast build rule for target.
+RubixLib/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/RubixLib.dir/build.make CMakeFiles/RubixLib.dir/build
+.PHONY : RubixLib/fast
+
+#=============================================================================
 # Target rules for targets named RubiksCubeVisualizer
 
 # Build rule for target.
@@ -265,6 +278,54 @@ glad/fast:
 	$(MAKE) $(MAKESILENT) -f _deps/glad-build/CMakeFiles/glad.dir/build.make _deps/glad-build/CMakeFiles/glad.dir/build
 .PHONY : glad/fast
 
+Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Cube.o: Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Cube.cpp.o
+.PHONY : Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Cube.o
+
+# target to build an object file
+Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Cube.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/RubixLib.dir/build.make CMakeFiles/RubixLib.dir/Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Cube.cpp.o
+.PHONY : Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Cube.cpp.o
+
+Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Cube.i: Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Cube.cpp.i
+.PHONY : Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Cube.i
+
+# target to preprocess a source file
+Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Cube.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/RubixLib.dir/build.make CMakeFiles/RubixLib.dir/Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Cube.cpp.i
+.PHONY : Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Cube.cpp.i
+
+Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Cube.s: Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Cube.cpp.s
+.PHONY : Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Cube.s
+
+# target to generate assembly for a file
+Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Cube.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/RubixLib.dir/build.make CMakeFiles/RubixLib.dir/Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Cube.cpp.s
+.PHONY : Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Cube.cpp.s
+
+Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Solver.o: Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Solver.cpp.o
+.PHONY : Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Solver.o
+
+# target to build an object file
+Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Solver.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/RubixLib.dir/build.make CMakeFiles/RubixLib.dir/Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Solver.cpp.o
+.PHONY : Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Solver.cpp.o
+
+Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Solver.i: Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Solver.cpp.i
+.PHONY : Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Solver.i
+
+# target to preprocess a source file
+Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Solver.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/RubixLib.dir/build.make CMakeFiles/RubixLib.dir/Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Solver.cpp.i
+.PHONY : Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Solver.cpp.i
+
+Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Solver.s: Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Solver.cpp.s
+.PHONY : Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Solver.s
+
+# target to generate assembly for a file
+Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Solver.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/RubixLib.dir/build.make CMakeFiles/RubixLib.dir/Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Solver.cpp.s
+.PHONY : Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Solver.cpp.s
+
 src/CubeRenderer.o: src/CubeRenderer.cpp.o
 .PHONY : src/CubeRenderer.o
 
@@ -331,8 +392,15 @@ help:
 	@echo "... uninstall"
 	@echo "... update_mappings"
 	@echo "... RubiksCubeVisualizer"
+	@echo "... RubixLib"
 	@echo "... glad"
 	@echo "... glfw"
+	@echo "... Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Cube.o"
+	@echo "... Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Cube.i"
+	@echo "... Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Cube.s"
+	@echo "... Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Solver.o"
+	@echo "... Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Solver.i"
+	@echo "... Users/ahnaf/Desktop/Coding/CubeSolver/Rubix/src/Solver.s"
 	@echo "... src/CubeRenderer.o"
 	@echo "... src/CubeRenderer.i"
 	@echo "... src/CubeRenderer.s"
