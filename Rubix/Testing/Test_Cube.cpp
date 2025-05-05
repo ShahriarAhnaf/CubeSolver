@@ -7,6 +7,15 @@
 #include <thread>
 #include <chrono>
 
+const char scramble_moves[12] = {
+    'l', 'L',
+    'r', 'R',
+    'u', 'U',
+    'd', 'D',
+    'f', 'F',
+    'b', 'B'
+}; 
+
 // Test function to verify if a cube is solved
 bool is_cube_solved(const RubixCube& cube) {
     RubixCube solved_cube;
@@ -30,6 +39,38 @@ void test_basic_moves() {
     // Test R' move
     cube.R_PRIME(1);
     assert(is_cube_solved(cube));
+
+    // Test L move
+    cube.L(1);
+    assert(!is_cube_solved(cube));
+    
+    // Test L' move
+    cube.L_PRIME(1);
+    assert(is_cube_solved(cube));
+
+    // Test U move
+    cube.U(1);
+    assert(!is_cube_solved(cube));
+    
+    // Test U' move
+    cube.U_PRIME(1);
+    assert(is_cube_solved(cube));
+
+    // Test F move
+    cube.F(1);
+    assert(!is_cube_solved(cube));
+    
+    // Test F' move
+    cube.R_PRIME(1);
+    assert(is_cube_solved(cube));
+
+    // Test D move
+    cube.D(1);
+    assert(!is_cube_solved(cube));
+    
+    // Test R' move
+    cube.D_PRIME(1);
+    assert(is_cube_solved(cube));
     
     std::cout << "Basic moves test passed!" << std::endl;
 }
@@ -51,18 +92,35 @@ void test_sequence_moves() {
 void test_solver() {
     std::cout << "Testing solver..." << std::endl;
     RubixCube cube;
-    
     // Scramble the cube
-    cube.R(1);
-    cube.U(1);
-    cube.R_PRIME(1);
-    cube.U_PRIME(1);
-    
+    std::string scramble;
+    for(int n =0; n < (rand() % 10); n++){
+        char move = scramble_moves[rand() % 12];
+        switch(move){
+            case 'u': cube.U(1); break;
+            case 'U': cube.U_PRIME(1); break;
+            case 'f': cube.F(1); break;
+            case 'F': cube.F_PRIME(1); break;
+            case 'l': cube.L(1); break;
+            case 'L': cube.L_PRIME(1); break;
+            case 'r': cube.R(1); break;
+            case 'R': cube.R_PRIME(1); break;
+            case 'b': cube.B(1); break;
+            case 'B': cube.B_PRIME(1); break;
+            case 'd': cube.D(1); break;
+            case 'D': cube.D_PRIME(1); break;
+            default:
+                break;
+        }
+    }
+    // technically you could solve the cube by luck...
+    assert(!is_cube_solved(cube));
     // Create solver and solve
     Solver solver;
-    std::string solution = solver.Solve_Cube(cube, 4);
+    std::string solution = solver.Solve_Cube(cube, 10);
     
     // Apply solution
+    std::cout << "Solver found solution:" << solution << "\n to scramble R, U, L, D" << std::endl;
     cube.apply_moves(solution);
     assert(is_cube_solved(cube));
     
@@ -134,15 +192,13 @@ void test_interactive_mode() {
                 
                 // Perform random moves
                 const char moves[] = "UDFBRL";
-                const char* primes[] = {"", "'", "2"};
                 for(int i = 0; i < num_moves; i++) {
                     char move = moves[rand() % 6];
-                    const char* prime = primes[rand() % 3];
-                    std::string move_str = std::string(1, move) + prime;
+                    std::string move_str = std::string(1, move);
                     cube.apply_moves(move_str);
                     wprintw(solver_window, "\nMove %d: %s", i + 1, move_str.c_str());
                     wrefresh(solver_window);
-                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
                 }
                 
                 wprintw(solver_window, "\n\nPress 'q' to continue");

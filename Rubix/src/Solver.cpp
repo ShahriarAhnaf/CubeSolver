@@ -265,7 +265,7 @@ bool Solver::has_bottom_layer(RubixCube& cube) {
 
 std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
     std::string all_moves;
-    
+    assert(is_cube_solved(given_cube));
     // Step 1: Solve white cross
     TargetState white_cross_target;
     // Set up white cross target
@@ -299,6 +299,7 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
     std::string cross_moves = Solve_IDFS(given_cube, white_cross_target, Depth_Limit);
     if(cross_moves != "") {
         given_cube = Apply_Moves(given_cube, cross_moves);
+        std::cout << "solved white cross using " << cross_moves << std::endl;
         all_moves += cross_moves + " ";
     }
 
@@ -339,6 +340,7 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
     std::string corner_moves = Solve_IDFS(given_cube, white_corners_target, Depth_Limit);
     if(corner_moves != "") {
         given_cube = Apply_Moves(given_cube, corner_moves);
+        std::cout << "solved white corners using " << corner_moves << std::endl;
         all_moves += corner_moves + " ";
     }
 
@@ -375,6 +377,7 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
     std::string second_layer_moves = Solve_IDFS(given_cube, second_layer_target, Depth_Limit);
     if(second_layer_moves != "") {
         given_cube = Apply_Moves(given_cube, second_layer_moves);
+        std::cout << "solved second layer using " << second_layer_moves << std::endl;
         all_moves += second_layer_moves + " ";
     }
 
@@ -389,6 +392,7 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
     std::string bottom_layer_moves = Solve_IDFS(given_cube, solved_target, Depth_Limit);
     if(bottom_layer_moves != "") {
         given_cube = Apply_Moves(given_cube, bottom_layer_moves);
+        std::cout << "solved bottom layer using " << bottom_layer_moves << std::endl;
         all_moves += bottom_layer_moves;
     }
 
