@@ -2,6 +2,10 @@
 A program that will be able to solve any given rubix cube
 Using Rubix Cube notation implementation
 
+## OpenGL Render
+![alt-text](./img/OpenGL_demo.png "OpenGL demo")
+
+
 ## Why is this even a project?
 - Using low level design techniques such as bitwise operations to speed up the base operations for Rubix cube algorithms without needing supercomputer like powers.
 - Implementing an objectively hard problem and using my own optimizatino to learn algorithms and Graphics
