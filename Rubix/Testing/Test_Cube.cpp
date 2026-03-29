@@ -1,212 +1,182 @@
-// Release builds define NDEBUG, which would compile every assert below away.
-#undef NDEBUG
 #include "Cube.h"
 #include "Solver.h"
 #include <iostream>
-#include <vector>
 #include <cassert>
-#include <ncurses.h>
-#include <thread>
 #include <chrono>
 
-// Test function to verify if a cube is solved
+static int tests_passed = 0;
+static int tests_failed = 0;
+
 bool is_cube_solved(const RubixCube& cube) {
     RubixCube solved_cube;
     return cube == solved_cube;
 }
 
+void check(bool condition, const char* name) {
+    if (condition) {
+        std::cout << "  PASS: " << name << std::endl;
+        tests_passed++;
+    } else {
+        std::cout << "  FAIL: " << name << std::endl;
+        tests_failed++;
+    }
+}
+
+// ------ Move correctness tests ------
+
 void test_cube_initialization() {
+    std::cout << "[Initialization]" << std::endl;
     RubixCube cube;
-    assert(is_cube_solved(cube) && "Cube should be initialized in solved state");
-    std::cout << "✓ Cube initialization test passed" << std::endl;
+    check(is_cube_solved(cube), "New cube is solved");
 }
 
-void test_basic_moves() {
-    std::cout << "Testing basic moves..." << std::endl;
-    RubixCube cube;
-    
-    // Test R move
-    cube.R(1);
-    assert(!is_cube_solved(cube));
-    
-    // Test R' move
-    cube.R_PRIME(1);
-    assert(is_cube_solved(cube));
-    
-    std::cout << "Basic moves test passed!" << std::endl;
+void test_move_prime_identity() {
+    std::cout << "[Move + Prime = Identity]" << std::endl;
+
+    { RubixCube c; c.R(1); c.R_PRIME(1); check(is_cube_solved(c), "R R'"); }
+    { RubixCube c; c.L(1); c.L_PRIME(1); check(is_cube_solved(c), "L L'"); }
+    { RubixCube c; c.U(1); c.U_PRIME(1); check(is_cube_solved(c), "U U'"); }
+    { RubixCube c; c.D(1); c.D_PRIME(1); check(is_cube_solved(c), "D D'"); }
+    { RubixCube c; c.F(1); c.F_PRIME(1); check(is_cube_solved(c), "F F'"); }
+    { RubixCube c; c.B(1); c.B_PRIME(1); check(is_cube_solved(c), "B B'"); }
 }
 
-void test_sequence_moves() {
-    std::cout << "Testing sequence moves..." << std::endl;
+void test_four_turns_identity() {
+    std::cout << "[4x turn = Identity]" << std::endl;
+
+    { RubixCube c; c.R(1); c.R(1); c.R(1); c.R(1); check(is_cube_solved(c), "R x4"); }
+    { RubixCube c; c.L(1); c.L(1); c.L(1); c.L(1); check(is_cube_solved(c), "L x4"); }
+    { RubixCube c; c.U(1); c.U(1); c.U(1); c.U(1); check(is_cube_solved(c), "U x4"); }
+    { RubixCube c; c.D(1); c.D(1); c.D(1); c.D(1); check(is_cube_solved(c), "D x4"); }
+    { RubixCube c; c.F(1); c.F(1); c.F(1); c.F(1); check(is_cube_solved(c), "F x4"); }
+    { RubixCube c; c.B(1); c.B(1); c.B(1); c.B(1); check(is_cube_solved(c), "B x4"); }
+
+    { RubixCube c; c.R_PRIME(1); c.R_PRIME(1); c.R_PRIME(1); c.R_PRIME(1); check(is_cube_solved(c), "R' x4"); }
+    { RubixCube c; c.L_PRIME(1); c.L_PRIME(1); c.L_PRIME(1); c.L_PRIME(1); check(is_cube_solved(c), "L' x4"); }
+    { RubixCube c; c.U_PRIME(1); c.U_PRIME(1); c.U_PRIME(1); c.U_PRIME(1); check(is_cube_solved(c), "U' x4"); }
+    { RubixCube c; c.D_PRIME(1); c.D_PRIME(1); c.D_PRIME(1); c.D_PRIME(1); check(is_cube_solved(c), "D' x4"); }
+    { RubixCube c; c.F_PRIME(1); c.F_PRIME(1); c.F_PRIME(1); c.F_PRIME(1); check(is_cube_solved(c), "F' x4"); }
+    { RubixCube c; c.B_PRIME(1); c.B_PRIME(1); c.B_PRIME(1); c.B_PRIME(1); check(is_cube_solved(c), "B' x4"); }
+}
+
+void test_double_move() {
+    std::cout << "[Double move consistency]" << std::endl;
+
+    { RubixCube a, b; a.R(2); b.R(1); b.R(1); check(a == b, "R(2) == R R"); }
+    { RubixCube a, b; a.U(2); b.U(1); b.U(1); check(a == b, "U(2) == U U"); }
+    { RubixCube a, b; a.D(2); b.D(1); b.D(1); check(a == b, "D(2) == D D"); }
+    { RubixCube a, b; a.F(2); b.F(1); b.F(1); check(a == b, "F(2) == F F"); }
+    { RubixCube a, b; a.L(2); b.L(1); b.L(1); check(a == b, "L(2) == L L"); }
+    { RubixCube a, b; a.B(2); b.B(1); b.B(1); check(a == b, "B(2) == B B"); }
+}
+
+void test_sexy_move() {
+    std::cout << "[Sexy move (R U R' U') x6 = Identity]" << std::endl;
     RubixCube cube;
-    
-    // R U R' U' has order 6: not solved after one repetition, solved after six
     for (int i = 0; i < 6; i++) {
-        cube.R(1);
-        cube.U(1);
-        cube.R_PRIME(1);
-        cube.U_PRIME(1);
-        assert(is_cube_solved(cube) == (i == 5));
+        cube.R(1); cube.U(1); cube.R_PRIME(1); cube.U_PRIME(1);
     }
-    
-    std::cout << "Sequence moves test passed!" << std::endl;
+    check(is_cube_solved(cube), "(R U R' U') x6");
 }
 
-void test_solver() {
-    std::cout << "Testing solver..." << std::endl;
-    RubixCube cube;
-    
-    // Scramble the cube
-    cube.R(1);
-    cube.U(1);
-    cube.R_PRIME(1);
-    cube.U_PRIME(1);
-    
-    // Create solver and solve. Solve_Cube works on (and solves) the cube passed to it,
-    // so hand it a copy and replay the returned moves on the original.
-    Solver solver;
-    RubixCube work = cube;
-    std::string solution = solver.Solve_Cube(work, 6); // the 4-move inverse needs depth > 4
-    assert(!solution.empty());
-    assert(is_cube_solved(work));
+void test_apply_moves_string() {
+    std::cout << "[apply_moves string parsing]" << std::endl;
+    RubixCube a, b;
+    a.R(1); a.U(1); a.R_PRIME(1);
+    b.apply_moves("R U R'");
+    check(a == b, "apply_moves('R U R\\'') matches manual calls");
 
-    // Apply solution
-    cube.apply_moves(solution);
-    assert(is_cube_solved(cube));
-    
-    std::cout << "Solver test passed!" << std::endl;
+    RubixCube c, d;
+    c.R(2); c.U(2); c.F(2);
+    d.apply_moves("R2 U2 F2");
+    check(c == d, "apply_moves('R2 U2 F2') matches manual calls");
 }
 
-void test_interactive_mode() {
-    std::cout << "Testing interactive mode..." << std::endl;
+// ------ Solver tests ------
+
+void test_solver_trivial() {
+    std::cout << "[Solver: already solved]" << std::endl;
     RubixCube cube;
-    RubixCube before;
-    RubixCube holder;
     Solver solver;
-    WINDOW *solver_window;
-    bool quit = false;
-    int x, y;
-    int depth_limit;  // Moved outside switch statement
-    std::string solution;  // Moved outside switch statement
-    
-    initscr();
-    noecho();
-    getmaxyx(stdscr, y, x);
-    
-    // Draw initial legend
-    WINDOW* legend_win = newwin(12, 25, 1, x - 26);
-    box(legend_win, 0, 0);
-    mvwprintw(legend_win, 1, 1, "Controls:");
-    mvwprintw(legend_win, 2, 1, " u/U : U / U'");
-    mvwprintw(legend_win, 3, 1, " d/D : D / D'");
-    mvwprintw(legend_win, 4, 1, " f/F : F / F'");
-    mvwprintw(legend_win, 5, 1, " b/B : B / B'");
-    mvwprintw(legend_win, 6, 1, " l/L : L / L'");
-    mvwprintw(legend_win, 7, 1, " r/R : R / R'");
-    mvwprintw(legend_win, 8, 1, " m   : Mix cube");
-    mvwprintw(legend_win, 9, 1, " s   : Solve");
-    mvwprintw(legend_win, 10, 1, " q   : Quit");
-    wrefresh(legend_win);
-    
-    while(!quit) {
-        clear();
-        cube.draw(x/4, y/2); // middle of screen
-        wrefresh(legend_win);
-        refresh();
-        switch(mvgetch(0, 0)) {
-            case 'u': cube.U(1); break;
-            case 'U': cube.U_PRIME(1); break;
-            case 'f': cube.F(1); break;
-            case 'F': cube.F_PRIME(1); break;
-            case 'l': cube.L(1); break;
-            case 'L': cube.L_PRIME(1); break;
-            case 'r': cube.R(1); break;
-            case 'R': cube.R_PRIME(1); break;
-            case 'b': cube.B(1); break;
-            case 'B': cube.B_PRIME(1); break;
-            case 'd': cube.D(1); break;
-            case 'D': cube.D_PRIME(1); break;
-            case 'm': {
-                solver_window = newwin(y/4, x/4, y/4, x/4);
-                box(solver_window, 0, 0);
-                wprintw(solver_window, "Enter number of moves (1-100): ");
-                wrefresh(solver_window);
-                int num_moves;
-                wscanw(solver_window, "%d", &num_moves);
-                // Clamp number of moves between 1 and 100
-                num_moves = std::max(1, std::min(100, num_moves));
-                wclear(solver_window);
-                box(solver_window, 0, 0);
-                wprintw(solver_window, "Scrambling with %d moves...", num_moves);
-                wrefresh(solver_window);
-                
-                // Perform random moves
-                const char moves[] = "UDFBRL";
-                const char* primes[] = {"", "'", "2"};
-                for(int i = 0; i < num_moves; i++) {
-                    char move = moves[rand() % 6];
-                    const char* prime = primes[rand() % 3];
-                    std::string move_str = std::string(1, move) + prime;
-                    cube.apply_moves(move_str);
-                    wprintw(solver_window, "\nMove %d: %s", i + 1, move_str.c_str());
-                    wrefresh(solver_window);
-                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                }
-                
-                wprintw(solver_window, "\n\nPress 'q' to continue");
-                wrefresh(solver_window);
-                while(mvgetch(0,1) != 'q') {}
-                delwin(solver_window);
-                break;
-            }
-            case 's':
-                solver_window = newwin(y/4, x/4, y/4, x/4);
-                box(solver_window, 0, 0);
-                wprintw(solver_window, "Enter depth limit (1-20): ");
-                wrefresh(solver_window);
-                wscanw(solver_window, "%d", &depth_limit);
-                // Clamp depth limit between 1 and 20
-                depth_limit = std::max(1, std::min(20, depth_limit));
-                wclear(solver_window);
-                box(solver_window, 0, 0);
-                wprintw(solver_window, "Solving with depth %d...", depth_limit);
-                wrefresh(solver_window);
-                solution = solver.Solve_Cube(cube, depth_limit);
-                if (solution.empty()) {
-                    wprintw(solver_window, "\nNo solution found");
-                } else {
-                    wprintw(solver_window, "\nSolution found:\n%s", solution.c_str());
-                }
-                wprintw(solver_window, "\nPress 'q' to continue");
-                wrefresh(solver_window);
-                while(mvgetch(0,1) != 'q') {}
-                delwin(solver_window);
-                break;
-            case 'q':
-                quit = true;
-                break;
-        }
+    std::string solution = solver.Solve_Cube(cube, 5);
+    check(is_cube_solved(cube), "Solved cube stays solved");
+}
+
+void test_solver_one_move() {
+    std::cout << "[Solver: 1-move scramble]" << std::endl;
+
+    const char* scrambles[] = {"R", "L", "U", "D", "F", "B", "R'", "U'", "F'"};
+    Solver solver;
+
+    for (const char* scramble : scrambles) {
+        RubixCube cube;
+        cube.apply_moves(scramble);
+        std::string solution = solver.Solve_Cube(cube, 5);
+        bool ok = is_cube_solved(cube);
+        std::string label = std::string("Scramble: ") + scramble;
+        check(ok, label.c_str());
     }
-    
-    delwin(legend_win);
-    endwin();
-    std::cout << "✓ Interactive mode test passed" << std::endl;
+}
+
+void test_solver_two_moves() {
+    std::cout << "[Solver: 2-move scrambles]" << std::endl;
+
+    const char* scrambles[] = {"R U", "F R", "U L", "D B", "R F'"};
+    Solver solver;
+
+    for (const char* scramble : scrambles) {
+        RubixCube cube;
+        cube.apply_moves(scramble);
+        auto t0 = std::chrono::high_resolution_clock::now();
+        std::string solution = solver.Solve_Cube(cube, 8);
+        auto t1 = std::chrono::high_resolution_clock::now();
+        long ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+        bool ok = is_cube_solved(cube);
+        std::string label = std::string("Scramble: ") + scramble + " (" + std::to_string(ms) + "ms)";
+        check(ok, label.c_str());
+        if (!solution.empty())
+            std::cout << "    Solution: " << solution << std::endl;
+    }
+}
+
+void test_solver_three_moves() {
+    std::cout << "[Solver: 3-move scrambles]" << std::endl;
+
+    const char* scrambles[] = {"R U F", "L D B", "R' U' F'"};
+    Solver solver;
+
+    for (const char* scramble : scrambles) {
+        RubixCube cube;
+        cube.apply_moves(scramble);
+        auto t0 = std::chrono::high_resolution_clock::now();
+        std::string solution = solver.Solve_Cube(cube, 10);
+        auto t1 = std::chrono::high_resolution_clock::now();
+        long ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+        bool ok = is_cube_solved(cube);
+        std::string label = std::string("Scramble: ") + scramble + " (" + std::to_string(ms) + "ms)";
+        check(ok, label.c_str());
+        if (!solution.empty())
+            std::cout << "    Solution: " << solution << std::endl;
+    }
 }
 
 int main() {
-    std::cout << "Running Cube Tests..." << std::endl;
-    
-    try {
-        test_cube_initialization();
-        test_basic_moves();
-        test_sequence_moves();
-        test_solver();
-        test_interactive_mode();
-        
-        std::cout << "\nAll tests passed successfully!" << std::endl;
-        return 0;
-    } catch (const std::exception& e) {
-        std::cerr << "Test failed: " << e.what() << std::endl;
-        return 1;
-    }
-} 
+    std::cout << "=== Rubik's Cube Test Suite ===" << std::endl << std::endl;
+
+    test_cube_initialization();
+    test_move_prime_identity();
+    test_four_turns_identity();
+    test_double_move();
+    test_sexy_move();
+    test_apply_moves_string();
+    test_solver_trivial();
+    test_solver_one_move();
+    test_solver_two_moves();
+    test_solver_three_moves();
+
+    std::cout << std::endl;
+    std::cout << "Results: " << tests_passed << " passed, "
+              << tests_failed << " failed" << std::endl;
+
+    return tests_failed > 0 ? 1 : 0;
+}

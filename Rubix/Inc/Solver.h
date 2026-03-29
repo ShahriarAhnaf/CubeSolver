@@ -48,6 +48,16 @@ struct TargetState {
         masks[face_index] = 0;
     }
 
+    // Re-enable checking for a specific sticker position
+    void set_relevant(uint8_t face_index, uint8_t position) {
+        SET_COLOR(masks[face_index], position, 0xFFU);
+    }
+
+    // Re-enable checking for an entire face
+    void set_face_relevant(uint8_t face_index) {
+        masks[face_index] = 0xFFFFFFFFFFFFFFFF;
+    }
+
     // Compare a cube with this target state, respecting don't care masks
     bool matches_cube(const RubixCube& cube) const {
         for(int i = 0; i < 6; i++) {
@@ -73,11 +83,12 @@ private:
       "B", "B'", "B2"
 	}; 
 
-    // Helper function to check if a cube matches a target state
     bool matches_target(const RubixCube& cube, const TargetState& target);
 
-	std::string Solve_DFS(RubixCube current_cube, TargetState target_state, std::string Moves, int depth_remaining);
-	std::string Solve_IDFS(RubixCube given_cube, TargetState target_state, int Depth_Limit);
+	std::string Solve_IDFS(RubixCube given_cube, const TargetState& target_state, int Depth_Limit);
+	bool Solve_DFS_fast(RubixCube current_cube, const TargetState& target_state,
+	                    std::vector<int>& path, int depth_remaining, int prev_move);
+
 	bool has_white_cross(RubixCube& cube);
 	bool has_white_corners(RubixCube& cube);
 	bool has_second_layer(RubixCube& cube);
@@ -87,40 +98,18 @@ private:
 	std::string solve_second_layer(RubixCube& cube);
 	std::string solve_bottom_cross(RubixCube& cube);
 	std::string solve_bottom_corners(RubixCube& cube);
-	
-    // Helper function to check if a move would undo the previous move
-    bool is_redundant_move(const std::string& current_move, const std::string& previous_move) const {
-        if (previous_move.empty()) return false;
-        
-        // Get the base move (without prime or 2)
-        char current_base = current_move[0];
-        char prev_base = previous_move[0];
-        
-        // Same face moves are redundant
-        if (current_base == prev_base) return true;
 
-        // Opposite faces commute (R L == L R), so only allow one ordering of the pair.
-        // Pairs: L/R, U/D, F/B. Allow the alphabetically-later face first (R before L, U before D, F before B).
-        auto opposite = [](char a, char b) {
-            return (a == 'L' && b == 'R') || (a == 'R' && b == 'L') ||
-                   (a == 'U' && b == 'D') || (a == 'D' && b == 'U') ||
-                   (a == 'F' && b == 'B') || (a == 'B' && b == 'F');
-        };
-        if (opposite(current_base, prev_base) && current_base > prev_base) return true;
-
-        // Check if current move would undo previous move
-        if (current_base == prev_base) {
-            // If previous was prime and current is not, or vice versa
-            if ((previous_move.find("PRIME") != std::string::npos && current_move.find("PRIME") == std::string::npos) ||
-                (previous_move.find("PRIME") == std::string::npos && current_move.find("PRIME") != std::string::npos)) {
-                return true;
-            }
-        }
-        
+    // Move index redundancy: groups of 3 (L/L'/L2 = group 0, R/R'/R2 = group 1, ...)
+    // Opposite pairs: (0,1)=L/R, (2,3)=U/D, (4,5)=F/B
+    bool is_redundant_move_idx(int current_idx, int prev_idx) const {
+        if (prev_idx < 0) return false;
+        int cur_group = current_idx / 3;
+        int prev_group = prev_idx / 3;
+        if (cur_group == prev_group) return true;
+        if (cur_group % 2 == 0 && prev_group == cur_group + 1) return true;
         return false;
     }
 
-    // DFS count for tracking search progress
     int dfs_count;
 
 public: 

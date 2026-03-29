@@ -128,6 +128,7 @@ void R_PRIME(uint64_t num_of_turns);
 void L_PRIME(uint64_t num_of_turns);
 void B_PRIME(uint64_t num_of_turns);
 void apply_moves(std::string moves);
+void apply_move_index(int move_index);
 };
 
 #endif /* CUBE_H */
