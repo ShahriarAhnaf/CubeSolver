@@ -9,6 +9,9 @@
 #include <string>
 #include <queue>
 
+#include "Cube.h"
+#include "Solver.h"
+
 // Standard Rubik's cube colors
 static const glm::vec3 COL_WHITE  (1.0f, 1.0f, 1.0f);
 static const glm::vec3 COL_YELLOW (1.0f, 1.0f, 0.0f);
@@ -18,7 +21,7 @@ static const glm::vec3 COL_BLUE   (0.0f, 0.0f, 0.8f);
 static const glm::vec3 COL_GREEN  (0.0f, 0.6f, 0.0f);
 static const glm::vec3 COL_BLACK  (0.08f, 0.08f, 0.08f);
 
-enum Face { FACE_RIGHT=0, FACE_LEFT, FACE_TOP, FACE_BOTTOM, FACE_FRONT, FACE_BACK };
+enum RenderFace { RFACE_RIGHT=0, RFACE_LEFT, RFACE_TOP, RFACE_BOTTOM, RFACE_FRONT, RFACE_BACK };
 
 struct Cubie {
     glm::ivec3 pos;           // logical position (-1,0,1) per axis
@@ -69,8 +72,15 @@ private:
     // Key debounce
     bool keyStates[GLFW_KEY_LAST + 1];
 
+    // Cube logic state
+    RubixCube cubeModel;
+    Solver solver;
+
     void initCubies();
+    void syncCubiesFromModel();
     void enqueueMove(int axis, int layer, float direction);
+    void enqueueMoveString(const std::string& moveStr);
+    void applyMoveToModel(int axis, int layer, float direction);
     void commitMove(const MoveAnim& anim);
 
     // Build per-frame geometry from cubie state

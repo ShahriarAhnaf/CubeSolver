@@ -1,0 +1,952 @@
+#include "Solver.h"
+#include <iostream>
+#include <sstream>
+#include <iterator>
+
+#include <algorithm>
+
+
+static long int DFS_count = 0;
+// static long int IDFS_count = 0;
+
+// Helper function to check if a cube matches a target state
+bool Solver::matches_target(const RubixCube& cube, const TargetState& target) {
+    for(int i = 0; i < 6; i++) {
+        uint64_t current_face = cube.get_face(i);
+        uint64_t target_face = target.faces[i];
+        uint64_t mask = target.masks[i];
+        
+        // Compare only the bits that are not masked (not don't care)
+        if((current_face & mask) != (target_face & mask)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// void Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit){
+		
+//         std::string IDFS_solved = Solve_IDFS(given_cube, Depth_Limit);
+//         if(IDFS_solved == "") mvprintw(10,1,"We aint making it out the hood");
+//          else {
+//             mvprintw(10,1, IDFS_solved.c_str());
+//             mvprintw(15,5, "Total iterative Cube State Checks = %ld", DFS_count);   
+            
+//          }
+//         //  if (given_cube == RubixCube()) mvprintw(1,1, "Already Solved!");
+//         // string solved = Solve_DFS(given_cube, "", Depth_Limit);
+
+//         // if(solved == "") mvprintw(1,1,"We aint making it out the hood");
+//         // else {
+//         //     mvprintw(1,1, solved.c_str());
+//         //     mvprintw(5,5, "Total Cube State Checks = %ld", DFS_count);   
+//         // }
+// }
+Solver::~Solver(){}
+
+bool Solver::Solve_DFS_fast(RubixCube current_cube, const TargetState& target_state,
+                            std::vector<int>& path, int depth_remaining, int prev_move) {
+    if (target_state.matches_cube(current_cube)) {
+        return true;
+    }
+    if (depth_remaining <= 0) {
+        return false;
+    }
+
+    dfs_count++;
+    for (int i = 0; i < 18; i++) {
+        if (is_redundant_move_idx(i, prev_move)) continue;
+
+        RubixCube copy = current_cube;
+        copy.apply_move_index(i);
+        path.push_back(i);
+
+        if (Solve_DFS_fast(copy, target_state, path, depth_remaining - 1, i)) {
+            return true;
+        }
+        path.pop_back();
+    }
+    return false;
+}
+
+std::string Solver::Solve_IDFS(RubixCube given_cube, const TargetState& target_state, int Depth_Limit) {
+    dfs_count = 0;
+    std::vector<int> path;
+    for (int depth = 0; depth <= Depth_Limit; depth++) {
+        path.clear();
+        if (Solve_DFS_fast(given_cube, target_state, path, depth, -1)) {
+            std::string result;
+            for (int idx : path) {
+                if (!result.empty()) result += " ";
+                result += Moveset[idx];
+            }
+            return result;
+        }
+    }
+    return "";
+}
+
+//applys a series of moves
+RubixCube Solver::Apply_Moves(RubixCube &El_cube, std::string leMoves){
+    RubixCube Local_Copy_Cube; // stack solved cube 
+    Local_Copy_Cube = El_cube; // supposed to copy over dem values
+    std::vector<std::string> tokens;
+ 
+    std::istringstream iss(leMoves);
+    std::string s;
+    while (iss >> s) {
+        tokens.push_back(s);
+    }
+    // for each move in the string
+    for(const std::string &Move : tokens){
+            if (Move == "L"){
+                Local_Copy_Cube.L(1);
+                }
+            else if (Move == "L'"){
+                Local_Copy_Cube.L_PRIME(1);
+                }
+            else if (Move == "L2"){
+                Local_Copy_Cube.L_PRIME(2);
+                }
+	        else if (Move == "R"){
+                Local_Copy_Cube.R(1);
+                }
+            else if (Move == "R'"){
+                Local_Copy_Cube.R_PRIME(1);
+                } 
+            else if (Move == "R2"){
+                Local_Copy_Cube.R_PRIME(2);
+                } 
+            else if (Move == "U"){
+                Local_Copy_Cube.U(1);
+                } 
+            else if (Move == "U'"){
+                Local_Copy_Cube.U_PRIME(1);
+                } 
+            else if (Move == "U2"){
+                Local_Copy_Cube.U(2);
+                } 
+            else if (Move == "D"){
+                Local_Copy_Cube.D(1);
+                }  
+            else if (Move == "D'"){
+                Local_Copy_Cube.D_PRIME(1);
+                } 
+            else if (Move == "D2"){
+                Local_Copy_Cube.D(2);
+                } 
+            else if (Move == "F"){
+                Local_Copy_Cube.F(1);
+                }  
+            else if (Move == "F'"){
+                Local_Copy_Cube.F_PRIME(1);
+                } 
+            else if (Move == "F2"){
+                Local_Copy_Cube.F(2);
+                } 
+            else if (Move == "B"){
+                Local_Copy_Cube.B(1);
+                }  
+            else if (Move == "B'"){
+                Local_Copy_Cube.B_PRIME(1);
+                }  
+            else if (Move == "B2"){
+                Local_Copy_Cube.B(2);
+                } 
+            else {
+                std::cout << "move not found" << std::endl;
+            }       
+    }
+    return Local_Copy_Cube; // to save the original cube
+	}
+
+// Helper function to check if a face has a white cross
+bool Solver::has_white_cross(RubixCube& cube) {
+    // Check if the top face (face 0) has white edges in the correct positions
+    // and if they match with their adjacent center colors
+    uint64_t top_face = cube.get_face(FACE_UP);
+    uint64_t front_face = cube.get_face(FACE_FRONT);
+    uint64_t right_face = cube.get_face(FACE_RIGHT);
+    uint64_t back_face = cube.get_face(FACE_BACK);
+    uint64_t left_face = cube.get_face(FACE_LEFT);
+
+    // Check each edge position
+    bool edge1 = GET_COLOR(top_face, TOP) == WHITE && 
+                 GET_COLOR(front_face, TOP) == GREEN;
+    bool edge3 = GET_COLOR(top_face, RIGHT) == WHITE && 
+                 GET_COLOR(right_face, TOP) == RED;
+    bool edge5 = GET_COLOR(top_face, BOTTOM) == WHITE && 
+                 GET_COLOR(back_face, TOP) == BLUE;
+    bool edge7 = GET_COLOR(top_face, LEFT) == WHITE && 
+                 GET_COLOR(left_face, TOP) == ORANGE;
+
+    return edge1 && edge3 && edge5 && edge7;
+}
+
+// Helper function to check if white face corners are solved
+bool Solver::has_white_corners(RubixCube& cube) {
+    uint64_t top_face = cube.get_face(FACE_UP);
+    uint64_t front_face = cube.get_face(FACE_FRONT);
+    uint64_t right_face = cube.get_face(FACE_RIGHT);
+    uint64_t back_face = cube.get_face(FACE_BACK);
+    uint64_t left_face = cube.get_face(FACE_LEFT);
+
+    // Check each corner position
+    bool corner0 = GET_COLOR(top_face, TOP_LEFT) == WHITE && 
+                   GET_COLOR(front_face, TOP_LEFT) == GREEN &&
+                   GET_COLOR(left_face, TOP_LEFT) == ORANGE;
+    
+    bool corner2 = GET_COLOR(top_face, TOP_RIGHT) == WHITE && 
+                   GET_COLOR(front_face, TOP_RIGHT) == GREEN &&
+                   GET_COLOR(right_face, TOP_LEFT) == RED;
+    
+    bool corner4 = GET_COLOR(top_face, BOTTOM_RIGHT) == WHITE && 
+                   GET_COLOR(back_face, TOP_RIGHT) == BLUE &&
+                   GET_COLOR(right_face, TOP_RIGHT) == RED;
+    
+    bool corner6 = GET_COLOR(top_face, BOTTOM_LEFT) == WHITE && 
+                   GET_COLOR(back_face, TOP_LEFT) == BLUE &&
+                   GET_COLOR(left_face, TOP_RIGHT) == ORANGE;
+
+    return corner0 && corner2 && corner4 && corner6;
+}
+
+// Helper function to check if second layer is solved
+bool Solver::has_second_layer(RubixCube& cube) {
+    uint64_t front_face = cube.get_face(FACE_FRONT);
+    uint64_t right_face = cube.get_face(FACE_RIGHT);
+    uint64_t back_face = cube.get_face(FACE_BACK);
+    uint64_t left_face = cube.get_face(FACE_LEFT);
+
+    // Check each edge in the second layer
+    bool front_right = GET_COLOR(front_face, RIGHT) == GREEN && 
+                       GET_COLOR(right_face, LEFT) == RED;
+    
+    bool right_back = GET_COLOR(right_face, RIGHT) == RED && 
+                      GET_COLOR(back_face, LEFT) == BLUE;
+    
+    bool back_left = GET_COLOR(back_face, RIGHT) == BLUE && 
+                     GET_COLOR(left_face, LEFT) == ORANGE;
+    
+    bool left_front = GET_COLOR(left_face, RIGHT) == ORANGE && 
+                      GET_COLOR(front_face, LEFT) == GREEN;
+
+    return front_right && right_back && back_left && left_front;
+}
+
+// Helper function to check if bottom layer is solved
+bool Solver::has_bottom_layer(RubixCube& cube) {
+    uint64_t bottom_face = cube.get_face(FACE_BOTTOM);
+    uint64_t front_face = cube.get_face(FACE_FRONT);
+    uint64_t right_face = cube.get_face(FACE_RIGHT);
+    uint64_t back_face = cube.get_face(FACE_BACK);
+    uint64_t left_face = cube.get_face(FACE_LEFT);
+
+    // Check if bottom face is all yellow
+    bool all_yellow = true;
+    for(int i = 0; i < 8; i++) {
+        if(GET_COLOR(bottom_face, i) != YELLOW) {
+            all_yellow = false;
+            break;
+        }
+    }
+
+    // Check if corners match with their adjacent colors
+    bool corner0 = GET_COLOR(front_face, BOTTOM_RIGHT) == GREEN && 
+                   GET_COLOR(right_face, BOTTOM_LEFT) == RED;
+    
+    bool corner2 = GET_COLOR(front_face, BOTTOM_LEFT) == GREEN && 
+                   GET_COLOR(left_face, BOTTOM_RIGHT) == ORANGE;
+    
+    bool corner4 = GET_COLOR(back_face, BOTTOM_LEFT) == BLUE && 
+                   GET_COLOR(left_face, BOTTOM_LEFT) == ORANGE;
+    
+    bool corner6 = GET_COLOR(back_face, BOTTOM_RIGHT) == BLUE && 
+                   GET_COLOR(right_face, BOTTOM_RIGHT) == RED;
+
+    return all_yellow && corner0 && corner2 && corner4 && corner6;
+}
+
+std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
+    std::string all_moves;
+
+    // Quick solve: try direct full solve with small depth before step-by-step
+    TargetState quick_target;
+    RubixCube quick_solved;
+    for(int i = 0; i < 6; i++)
+        quick_target.faces[i] = quick_solved.get_face(i);
+
+    int quick_depth = std::min(Depth_Limit, 5);
+    std::string quick = Solve_IDFS(given_cube, quick_target, quick_depth);
+    if(!quick.empty()) {
+        given_cube = Apply_Moves(given_cube, quick);
+        return quick;
+    }
+
+    // Helper lambda to build a target that preserves two solved layers
+    auto set_two_layers = [](TargetState& t) {
+        for(int j = 0; j < 8; j++)
+            SET_COLOR(t.faces[FACE_UP], j, WHITE);
+        for(int i = FACE_LEFT; i <= FACE_BACK; i++) {
+            uint8_t c = i; // face index == solved color
+            SET_COLOR(t.faces[i], TOP_LEFT, c);
+            SET_COLOR(t.faces[i], TOP, c);
+            SET_COLOR(t.faces[i], TOP_RIGHT, c);
+            SET_COLOR(t.faces[i], RIGHT, c);
+            SET_COLOR(t.faces[i], LEFT, c);
+            t.set_dont_care(i, BOTTOM_LEFT);
+            t.set_dont_care(i, BOTTOM);
+            t.set_dont_care(i, BOTTOM_RIGHT);
+        }
+        t.set_face_dont_care(FACE_BOTTOM);
+    };
+
+    // --- Step 1: White cross ---
+    // FACE_UP edges = WHITE, side face TOP edges = face color, everything else don't care
+    TargetState white_cross;
+    for(int j = 0; j < 8; j++) {
+        if(j == TOP || j == RIGHT || j == BOTTOM || j == LEFT)
+            SET_COLOR(white_cross.faces[FACE_UP], j, WHITE);
+        else
+            white_cross.set_dont_care(FACE_UP, j);
+    }
+    for(int i = FACE_LEFT; i <= FACE_BACK; i++) {
+        SET_COLOR(white_cross.faces[i], TOP, i);
+        for(int j = 0; j < 8; j++)
+            if(j != TOP) white_cross.set_dont_care(i, j);
+    }
+    white_cross.set_face_dont_care(FACE_BOTTOM);
+
+    std::string moves = Solve_IDFS(given_cube, white_cross, Depth_Limit);
+    if(!moves.empty()) {
+        given_cube = Apply_Moves(given_cube, moves);
+        all_moves += moves;
+    }
+
+    // --- Step 2: First layer (white face complete + top row of side faces) ---
+    TargetState first_layer;
+    for(int j = 0; j < 8; j++)
+        SET_COLOR(first_layer.faces[FACE_UP], j, WHITE);
+    for(int i = FACE_LEFT; i <= FACE_BACK; i++) {
+        uint8_t c = i;
+        SET_COLOR(first_layer.faces[i], TOP_LEFT, c);
+        SET_COLOR(first_layer.faces[i], TOP, c);
+        SET_COLOR(first_layer.faces[i], TOP_RIGHT, c);
+        for(int j = 0; j < 8; j++)
+            if(j != TOP_LEFT && j != TOP && j != TOP_RIGHT)
+                first_layer.set_dont_care(i, j);
+    }
+    first_layer.set_face_dont_care(FACE_BOTTOM);
+
+    moves = Solve_IDFS(given_cube, first_layer, Depth_Limit);
+    if(!moves.empty()) {
+        given_cube = Apply_Moves(given_cube, moves);
+        all_moves += " " + moves;
+    }
+
+    // --- Step 3: Second layer (middle-layer edges) ---
+    TargetState second_layer;
+    set_two_layers(second_layer);
+
+    moves = Solve_IDFS(given_cube, second_layer, Depth_Limit);
+    if(!moves.empty()) {
+        given_cube = Apply_Moves(given_cube, moves);
+        all_moves += " " + moves;
+    }
+
+    // --- Step 4: Yellow cross (orient bottom-face edges) ---
+    TargetState yellow_cross;
+    set_two_layers(yellow_cross);
+    SET_COLOR(yellow_cross.faces[FACE_BOTTOM], TOP, YELLOW);
+    SET_COLOR(yellow_cross.faces[FACE_BOTTOM], RIGHT, YELLOW);
+    SET_COLOR(yellow_cross.faces[FACE_BOTTOM], BOTTOM, YELLOW);
+    SET_COLOR(yellow_cross.faces[FACE_BOTTOM], LEFT, YELLOW);
+    yellow_cross.set_relevant(FACE_BOTTOM, TOP);
+    yellow_cross.set_relevant(FACE_BOTTOM, RIGHT);
+    yellow_cross.set_relevant(FACE_BOTTOM, BOTTOM);
+    yellow_cross.set_relevant(FACE_BOTTOM, LEFT);
+
+    moves = Solve_IDFS(given_cube, yellow_cross, Depth_Limit);
+    if(!moves.empty()) {
+        given_cube = Apply_Moves(given_cube, moves);
+        all_moves += " " + moves;
+    }
+
+    // --- Step 5: Yellow face (orient all bottom-face stickers) ---
+    TargetState yellow_face;
+    set_two_layers(yellow_face);
+    for(int j = 0; j < 8; j++)
+        SET_COLOR(yellow_face.faces[FACE_BOTTOM], j, YELLOW);
+    yellow_face.set_face_relevant(FACE_BOTTOM);
+
+    moves = Solve_IDFS(given_cube, yellow_face, Depth_Limit);
+    if(!moves.empty()) {
+        given_cube = Apply_Moves(given_cube, moves);
+        all_moves += " " + moves;
+    }
+
+    // --- Step 6: Permute bottom corners ---
+    TargetState bottom_corners;
+    set_two_layers(bottom_corners);
+    for(int j = 0; j < 8; j++)
+        SET_COLOR(bottom_corners.faces[FACE_BOTTOM], j, YELLOW);
+    bottom_corners.set_face_relevant(FACE_BOTTOM);
+    for(int i = FACE_LEFT; i <= FACE_BACK; i++) {
+        uint8_t c = i;
+        SET_COLOR(bottom_corners.faces[i], BOTTOM_LEFT, c);
+        SET_COLOR(bottom_corners.faces[i], BOTTOM_RIGHT, c);
+        bottom_corners.set_relevant(i, BOTTOM_LEFT);
+        bottom_corners.set_relevant(i, BOTTOM_RIGHT);
+    }
+
+    moves = Solve_IDFS(given_cube, bottom_corners, Depth_Limit);
+    if(!moves.empty()) {
+        given_cube = Apply_Moves(given_cube, moves);
+        all_moves += " " + moves;
+    }
+
+    // --- Step 7: Permute bottom edges (full solve) ---
+    TargetState solved;
+    RubixCube solved_cube;
+    for(int i = 0; i < 6; i++)
+        solved.faces[i] = solved_cube.get_face(i);
+
+    moves = Solve_IDFS(given_cube, solved, Depth_Limit);
+    if(!moves.empty()) {
+        given_cube = Apply_Moves(given_cube, moves);
+        all_moves += " " + moves;
+    }
+
+    return all_moves;
+}
+
+// These functions need to be implemented with the actual solving algorithms
+std::string Solver::solve_white_cross(RubixCube& cube) {
+    std::string moves = "";
+    
+    // Find white edges and move them to the top face
+    uint64_t front_face = cube.get_face(FACE_FRONT);
+    uint64_t right_face = cube.get_face(FACE_RIGHT);
+    uint64_t back_face = cube.get_face(FACE_BACK);
+    uint64_t left_face = cube.get_face(FACE_LEFT);
+    uint64_t bottom_face = cube.get_face(FACE_BOTTOM);
+    
+    // Check front face
+    if(GET_COLOR(front_face, TOP) == WHITE) {
+        // Edge is already in position
+    }
+    else if(GET_COLOR(front_face, RIGHT) == WHITE) {
+        moves += "F U R U' F' ";
+        cube.F(1); cube.U(1); cube.R(1); cube.U_PRIME(1); cube.F_PRIME(1);
+    }
+    else if(GET_COLOR(front_face, BOTTOM) == WHITE) {
+        moves += "F2 ";
+        cube.F(2);
+    }
+    else if(GET_COLOR(front_face, LEFT) == WHITE) {
+        moves += "F' U L' U' F ";
+        cube.F_PRIME(1); cube.U(1); cube.L_PRIME(1); cube.U_PRIME(1); cube.F(1);
+    }
+
+    // Check right face
+    if(GET_COLOR(right_face, TOP) == WHITE) {
+        moves += "R U F U' R' ";
+        cube.R(1); cube.U(1); cube.F(1); cube.U_PRIME(1); cube.R_PRIME(1);
+    }
+    else if(GET_COLOR(right_face, RIGHT) == WHITE) {
+        // Edge is already in position
+    }
+    else if(GET_COLOR(right_face, BOTTOM) == WHITE) {
+        moves += "R2 ";
+        cube.R(2);
+    }
+    else if(GET_COLOR(right_face, LEFT) == WHITE) {
+        moves += "R' U B' U' R ";
+        cube.R_PRIME(1); cube.U(1); cube.B_PRIME(1); cube.U_PRIME(1); cube.R(1);
+    }
+
+    // Check back face
+    if(GET_COLOR(back_face, TOP) == WHITE) {
+        moves += "B U R U' B' ";
+        cube.B(1); cube.U(1); cube.R(1); cube.U_PRIME(1); cube.B_PRIME(1);
+    }
+    else if(GET_COLOR(back_face, RIGHT) == WHITE) {
+        moves += "B' U L' U' B ";
+        cube.B_PRIME(1); cube.U(1); cube.L_PRIME(1); cube.U_PRIME(1); cube.B(1);
+    }
+    else if(GET_COLOR(back_face, BOTTOM) == WHITE) {
+        moves += "B2 ";
+        cube.B(2);
+    }
+    else if(GET_COLOR(back_face, LEFT) == WHITE) {
+        // Edge is already in position
+    }
+
+    // Check left face
+    if(GET_COLOR(left_face, TOP) == WHITE) {
+        moves += "L U B U' L' ";
+        cube.L(1); cube.U(1); cube.B(1); cube.U_PRIME(1); cube.L_PRIME(1);
+    }
+    else if(GET_COLOR(left_face, RIGHT) == WHITE) {
+        moves += "L' U F' U' L ";
+        cube.L_PRIME(1); cube.U(1); cube.F_PRIME(1); cube.U_PRIME(1); cube.L(1);
+    }
+    else if(GET_COLOR(left_face, BOTTOM) == WHITE) {
+        moves += "L2 ";
+        cube.L(2);
+    }
+    else if(GET_COLOR(left_face, LEFT) == WHITE) {
+        // Edge is already in position
+    }
+
+    // Check bottom face
+    for(int i = 0; i < 4; i++) {
+        if(GET_COLOR(bottom_face, i * 2) == WHITE) {
+            switch(i) {
+                case 0: // Front edge
+                    moves += "F2 ";
+                    cube.F(2);
+                    break;
+                case 1: // Right edge
+                    moves += "R2 ";
+                    cube.R(2);
+                    break;
+                case 2: // Back edge
+                    moves += "B2 ";
+                    cube.B(2);
+                    break;
+                case 3: // Left edge
+                    moves += "L2 ";
+                    cube.L(2);
+                    break;
+            }
+        }
+    }
+
+    return moves;
+}
+
+std::string Solver::solve_white_corners(RubixCube& cube) {
+    std::string moves = "";
+    
+    // Find white corners and move them to the correct position
+    // We'll check each face for white corners and move them to the correct position
+    
+    // Check front face (face 2)
+    uint64_t front_face = cube.get_face(FACE_FRONT);
+    uint64_t right_face = cube.get_face(FACE_RIGHT);
+    uint64_t top_face = cube.get_face(FACE_UP);
+    
+    // Check top-right corner
+    if(GET_COLOR(front_face, TOP_LEFT) == WHITE) {
+        // Corner is in position, check if it needs to be oriented
+        if(GET_COLOR(top_face, TOP_LEFT) != WHITE) {
+            moves += "R U R' ";
+            cube.R(1); cube.U(1); cube.R_PRIME(1);
+        }
+    }
+    // Check bottom-right corner
+    else if(GET_COLOR(front_face, BOTTOM_RIGHT) == WHITE) {
+        moves += "R U R' ";
+        cube.R(1); cube.U(1); cube.R_PRIME(1);
+    }
+    // Check bottom-left corner
+    else if(GET_COLOR(front_face, BOTTOM_LEFT) == WHITE) {
+        moves += "L' U' L ";
+        cube.L_PRIME(1); cube.U_PRIME(1); cube.L(1);
+    }
+    
+    // Check right face (face 3)
+    uint64_t back_face = cube.get_face(FACE_BACK);
+    
+    // Check top-right corner
+    if(GET_COLOR(right_face, TOP_LEFT) == WHITE) {
+        // Corner is in position, check if it needs to be oriented
+        if(GET_COLOR(top_face, TOP_RIGHT) != WHITE) {
+            moves += "B U B' ";
+            cube.B(1); cube.U(1); cube.B_PRIME(1);
+        }
+    }
+    // Check bottom-right corner
+    else if(GET_COLOR(right_face, BOTTOM_RIGHT) == WHITE) {
+        moves += "B U B' ";
+        cube.B(1); cube.U(1); cube.B_PRIME(1);
+    }
+    // Check bottom-left corner
+    else if(GET_COLOR(right_face, BOTTOM_LEFT) == WHITE) {
+        moves += "R' U' R ";
+        cube.R_PRIME(1); cube.U_PRIME(1); cube.R(1);
+    }
+    
+    // Check back face (face 4)
+    uint64_t left_face = cube.get_face(FACE_LEFT);
+    
+    // Check top-right corner
+    if(GET_COLOR(back_face, TOP_LEFT) == WHITE) {
+        // Corner is in position, check if it needs to be oriented
+        if(GET_COLOR(top_face, BOTTOM_RIGHT) != WHITE) {
+            moves += "L U L' ";
+            cube.L(1); cube.U(1); cube.L_PRIME(1);
+        }
+    }
+    // Check bottom-right corner
+    else if(GET_COLOR(back_face, BOTTOM_RIGHT) == WHITE) {
+        moves += "L U L' ";
+        cube.L(1); cube.U(1); cube.L_PRIME(1);
+    }
+    // Check bottom-left corner
+    else if(GET_COLOR(back_face, BOTTOM_LEFT) == WHITE) {
+        moves += "B' U' B ";
+        cube.B_PRIME(1); cube.U_PRIME(1); cube.B(1);
+    }
+    
+    // Check left face (face 1)
+    // Check top-right corner
+    if(GET_COLOR(left_face, TOP_LEFT) == WHITE) {
+        // Corner is in position, check if it needs to be oriented
+        if(GET_COLOR(top_face, TOP_LEFT) != WHITE) {
+            moves += "F U F' ";
+            cube.F(1); cube.U(1); cube.F_PRIME(1);
+        }
+    }
+    // Check bottom-right corner
+    else if(GET_COLOR(left_face, BOTTOM_RIGHT) == WHITE) {
+        moves += "F U F' ";
+        cube.F(1); cube.U(1); cube.F_PRIME(1);
+    }
+    // Check bottom-left corner
+    else if(GET_COLOR(left_face, BOTTOM_LEFT) == WHITE) {
+        moves += "L' U' L ";
+        cube.L_PRIME(1); cube.U_PRIME(1); cube.L(1);
+    }
+    
+    // Check bottom face (face 5)
+    uint64_t bottom_face = cube.get_face(FACE_BOTTOM);
+    
+    // Check each corner
+    for(int i = 0; i < 4; i++) {
+        if(GET_COLOR(bottom_face, i * 2) == WHITE) {
+            // Move the corner to the top
+            switch(i) {
+                case 0: // Front-right corner
+                    moves += "R U2 R' ";
+                    cube.R(1); cube.U(2); cube.R_PRIME(1);
+                    break;
+                case 1: // Back-right corner
+                    moves += "B U2 B' ";
+                    cube.B(1); cube.U(2); cube.B_PRIME(1);
+                    break;
+                case 2: // Back-left corner
+                    moves += "L U2 L' ";
+                    cube.L(1); cube.U(2); cube.L_PRIME(1);
+                    break;
+                case 3: // Front-left corner
+                    moves += "F U2 F' ";
+                    cube.F(1); cube.U(2); cube.F_PRIME(1);
+                    break;
+            }
+        }
+    }
+    
+    return moves;
+}
+
+std::string Solver::solve_second_layer(RubixCube& cube) {
+    std::string moves = "";
+    
+    // Find edges that belong in the second layer and move them to the correct position
+    // We'll check each face for edges that need to be moved to the second layer
+    
+    // Check front face (face 2)
+    uint64_t front_face = cube.get_face(FACE_FRONT);
+    uint64_t right_face = cube.get_face(FACE_RIGHT);
+    uint64_t left_face = cube.get_face(FACE_LEFT);
+    
+    // Check right edge
+    if(GET_COLOR(front_face, RIGHT) != GREEN) {
+        // Edge needs to be moved to the second layer
+        if(GET_COLOR(right_face, LEFT) == GREEN) {
+            // Edge is on the right face, move it to the front
+            moves += "U R U' R' U' F' U F ";
+            cube.U(1); cube.R(1); cube.U_PRIME(1); cube.R_PRIME(1); 
+            cube.U_PRIME(1); cube.F_PRIME(1); cube.U(1); cube.F(1);
+        }
+        else if(GET_COLOR(left_face, RIGHT) == GREEN) {
+            // Edge is on the left face, move it to the front
+            moves += "U R U' R' U' F' U F ";
+            cube.U(1); cube.R(1); cube.U_PRIME(1); cube.R_PRIME(1);
+            cube.U_PRIME(1); cube.F_PRIME(1); cube.U(1); cube.F(1);
+        }
+    }
+    
+    // Check left edge
+    if(GET_COLOR(front_face, LEFT) != GREEN) {
+        // Edge needs to be moved to the second layer
+        if(GET_COLOR(right_face, RIGHT) == GREEN) {
+            // Edge is on the right face, move it to the front
+            moves += "U R U' R' U' F' U F ";
+            cube.U(1); cube.R(1); cube.U_PRIME(1); cube.R_PRIME(1);
+            cube.U_PRIME(1); cube.F_PRIME(1); cube.U(1); cube.F(1);
+        }
+        else if(GET_COLOR(left_face, LEFT) == GREEN) {
+            // Edge is on the left face, move it to the front
+            moves += "U R U' R' U' F' U F ";
+            cube.U(1); cube.R(1); cube.U_PRIME(1); cube.R_PRIME(1);
+            cube.U_PRIME(1); cube.F_PRIME(1); cube.U(1); cube.F(1);
+        }
+    }
+    
+    // Check right face (face 3)
+    uint64_t back_face = cube.get_face(FACE_BACK);
+    
+    // Check right edge
+    if(GET_COLOR(right_face, RIGHT) != RED) {
+        // Edge needs to be moved to the second layer
+        if(GET_COLOR(front_face, RIGHT) == RED) {
+            // Edge is on the front face, move it to the right
+            moves += "U F U' F' U' R' U R ";
+            cube.U(1); cube.F(1); cube.U_PRIME(1); cube.F_PRIME(1);
+            cube.U_PRIME(1); cube.R_PRIME(1); cube.U(1); cube.R(1);
+        }
+        else if(GET_COLOR(back_face, LEFT) == RED) {
+            // Edge is on the back face, move it to the right
+            moves += "U F U' F' U' R' U R ";
+            cube.U(1); cube.F(1); cube.U_PRIME(1); cube.F_PRIME(1);
+            cube.U_PRIME(1); cube.R_PRIME(1); cube.U(1); cube.R(1);
+        }
+    }
+    
+    // Check left face (face 1)
+    // Check right edge
+    if(((left_face & 0x0000FF0000000000) >> 40) != ORANGE) {
+        // Edge needs to be moved to the second layer
+        if(((front_face & 0x0000FF0000000000) >> 40) == ORANGE) {
+            // Edge is on the front face, move it to the left
+            moves += "U F U' F' U' L' U L ";
+            cube.U(1); cube.F(1); cube.U_PRIME(1); cube.F_PRIME(1);
+            cube.U_PRIME(1); cube.L_PRIME(1); cube.U(1); cube.L(1);
+        }
+        else if(((back_face & 0x0000FF0000000000) >> 40) == ORANGE) {
+            // Edge is on the back face, move it to the left
+            moves += "U F U' F' U' L' U L ";
+            cube.U(1); cube.F(1); cube.U_PRIME(1); cube.F_PRIME(1);
+            cube.U_PRIME(1); cube.L_PRIME(1); cube.U(1); cube.L(1);
+        }
+    }
+    
+    // Check left edge
+    if(((left_face & 0x000000000000FF00) >> 8) != ORANGE) {
+        // Edge needs to be moved to the second layer
+        if(((front_face & 0x000000000000FF00) >> 8) == ORANGE) {
+            // Edge is on the front face, move it to the left
+            moves += "U F U' F' U' L' U L ";
+            cube.U(1); cube.F(1); cube.U_PRIME(1); cube.F_PRIME(1);
+            cube.U_PRIME(1); cube.L_PRIME(1); cube.U(1); cube.L(1);
+        }
+        else if(((back_face & 0x000000000000FF00) >> 8) == ORANGE) {
+            // Edge is on the back face, move it to the left
+            moves += "U F U' F' U' L' U L ";
+            cube.U(1); cube.F(1); cube.U_PRIME(1); cube.F_PRIME(1);
+            cube.U_PRIME(1); cube.L_PRIME(1); cube.U(1); cube.L(1);
+        }
+    }
+    
+    return moves;
+}
+
+std::string Solver::solve_bottom_cross(RubixCube& cube) {
+    std::string moves = "";
+    
+    uint64_t front_face = cube.get_face(FACE_FRONT);
+    uint64_t right_face = cube.get_face(FACE_RIGHT);
+    uint64_t back_face = cube.get_face(FACE_BACK);
+    uint64_t left_face = cube.get_face(FACE_LEFT);
+    uint64_t bottom_face = cube.get_face(FACE_BOTTOM);
+    
+    // Check each face for yellow edges
+    if(GET_COLOR(front_face, BOTTOM) == YELLOW) {
+        moves += "F2 ";
+        cube.F(2);
+    }
+    
+    if(GET_COLOR(right_face, BOTTOM) == YELLOW) {
+        moves += "R2 ";
+        cube.R(2);
+    }
+    
+    if(GET_COLOR(back_face, BOTTOM) == YELLOW) {
+        moves += "B2 ";
+        cube.B(2);
+    }
+    
+    if(GET_COLOR(left_face, BOTTOM) == YELLOW) {
+        moves += "L2 ";
+        cube.L(2);
+    }
+    
+    // Now we need to orient the yellow edges correctly
+    // We'll use the "fish" algorithm to orient the edges
+    
+    // Check if we have a line or an L shape
+    int yellow_edges = 0;
+    bool edges[4] = {false, false, false, false};
+    
+    // Check each edge on the bottom face
+    for(int i = 0; i < 4; i++) {
+        if(GET_COLOR(bottom_face, i * 2) == YELLOW) {
+            yellow_edges++;
+            edges[i] = true;
+        }
+    }
+    
+    // If we have 2 yellow edges, we need to check if they form a line or an L
+    if(yellow_edges == 2) {
+        // Check if they form a line
+        if((edges[0] && edges[2]) || (edges[1] && edges[3])) {
+            // We have a line, rotate the cube to get the line horizontal
+            if(edges[0] && edges[2]) {
+                moves += "U ";
+                cube.U(1);
+            }
+            
+            // Apply the fish algorithm
+            moves += "F R U R' R U2 R' ";
+            cube.F(1); cube.R(1); cube.U(1); cube.R_PRIME(1); 
+            cube.U(1); cube.R(1); cube.U(2); cube.R_PRIME(1);
+        }
+        else {
+            // We have an L shape, rotate the cube to get the L in the correct position
+            if(edges[0] && edges[1]) {
+                moves += "U ";
+                cube.U(1);
+            }
+            else if(edges[1] && edges[2]) {
+                moves += "U2 ";
+                cube.U(2);
+            }
+            else if(edges[2] && edges[3]) {
+                moves += "U' ";
+                cube.U_PRIME(1);
+            }
+            
+            // Apply the fish algorithm
+            moves += "F R U R' R U2 R' ";
+            cube.F(1); cube.R(1); cube.U(1); cube.R_PRIME(1); 
+            cube.U(1); cube.R(1); cube.U(2); cube.R_PRIME(1);
+        }
+    }
+    // If we have no yellow edges, we need to create a line
+    else if(yellow_edges == 0) {
+        // Apply the fish algorithm twice
+        moves += "F R U R' R U2 R' ";
+        cube.F(1); cube.R(1); cube.U(1); cube.R_PRIME(1); 
+        cube.U(1); cube.R(1); cube.U(2); cube.R_PRIME(1);
+        
+        moves += "U2 ";
+        cube.U(2);
+        
+        moves += "F R U R' R U2 R' ";
+        cube.F(1); cube.R(1); cube.U(1); cube.R_PRIME(1); 
+        cube.U(1); cube.R(1); cube.U(2); cube.R_PRIME(1);
+    }
+    
+    return moves;
+}
+
+std::string Solver::solve_bottom_corners(RubixCube& cube) {
+    std::string moves = "";
+    
+    uint64_t front_face = cube.get_face(FACE_FRONT);
+    uint64_t right_face = cube.get_face(FACE_RIGHT);
+    uint64_t back_face = cube.get_face(FACE_BACK);
+    uint64_t left_face = cube.get_face(FACE_LEFT);
+    uint64_t bottom_face = cube.get_face(FACE_BOTTOM);
+    
+    // Check if corners are in the correct position
+    bool corners_correct = true;
+    bool corners_oriented = true;
+    
+    // Check front-right corner
+    if(GET_COLOR(front_face, BOTTOM_RIGHT) != GREEN || 
+       GET_COLOR(right_face, BOTTOM_LEFT) != RED) {
+        corners_correct = false;
+    }
+    if(GET_COLOR(bottom_face, TOP_LEFT) != YELLOW) {
+        corners_oriented = false;
+    }
+    
+    // Check back-right corner
+    if(GET_COLOR(right_face, BOTTOM_RIGHT) != RED || 
+       GET_COLOR(back_face, BOTTOM_LEFT) != BLUE) {
+        corners_correct = false;
+    }
+    if(GET_COLOR(bottom_face, TOP_RIGHT) != YELLOW) {
+        corners_oriented = false;
+    }
+    
+    // Check back-left corner
+    if(GET_COLOR(back_face, BOTTOM_RIGHT) != BLUE || 
+       GET_COLOR(left_face, BOTTOM_LEFT) != ORANGE) {
+        corners_correct = false;
+    }
+    if(GET_COLOR(bottom_face, BOTTOM_RIGHT) != YELLOW) {
+        corners_oriented = false;
+    }
+    
+    // Check front-left corner
+    if(GET_COLOR(left_face, BOTTOM_RIGHT) != ORANGE || 
+       GET_COLOR(front_face, BOTTOM_LEFT) != GREEN) {
+        corners_correct = false;
+    }
+    if(GET_COLOR(bottom_face, BOTTOM_LEFT) != YELLOW) {
+        corners_oriented = false;
+    }
+    
+    // If corners are not in the correct position, we need to position them
+    if(!corners_correct) {
+        // Use the "sexy move" algorithm to position corners
+        moves += "R U R' ";
+        cube.R(1); cube.U(1); cube.R_PRIME(1);
+        
+        // Check if we need to rotate the cube
+        if(GET_COLOR(front_face, BOTTOM_RIGHT) == GREEN && 
+           GET_COLOR(right_face, BOTTOM_LEFT) == RED) {
+            moves += "U ";
+            cube.U(1);
+        }
+        else if(GET_COLOR(right_face, BOTTOM_RIGHT) == RED && 
+                GET_COLOR(back_face, BOTTOM_LEFT) == BLUE) {
+            moves += "U2 ";
+            cube.U(2);
+        }
+        else if(GET_COLOR(back_face, BOTTOM_RIGHT) == BLUE && 
+                GET_COLOR(left_face, BOTTOM_LEFT) == ORANGE) {
+            moves += "U' ";
+            cube.U_PRIME(1);
+        }
+    }
+    
+    // If corners are not oriented correctly, we need to orient them
+    if(!corners_oriented) {
+        // Use the "sune" algorithm to orient corners
+        moves += "R U R' ";
+        cube.R(1); cube.U(1); cube.R_PRIME(1);
+        
+        // Check if we need to rotate the cube
+        if(GET_COLOR(bottom_face, TOP_LEFT) != YELLOW) {
+            moves += "U ";
+            cube.U(1);
+        }
+        else if(GET_COLOR(bottom_face, TOP_RIGHT) != YELLOW) {
+            moves += "U2 ";
+            cube.U(2);
+        }
+        else if(GET_COLOR(bottom_face, BOTTOM_LEFT) != YELLOW) {
+            moves += "U' ";
+            cube.U_PRIME(1);
+        }
+    }
+    
+    return moves;
+}
+

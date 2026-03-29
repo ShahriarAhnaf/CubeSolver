@@ -35,14 +35,150 @@ void CubeRenderer::initCubies() {
                 for (int f = 0; f < 6; f++) c.faceColors[f] = COL_BLACK;
 
                 // Assign sticker colors based on position
-                if (x ==  1) c.faceColors[FACE_RIGHT]  = COL_RED;
-                if (x == -1) c.faceColors[FACE_LEFT]   = COL_ORANGE;
-                if (y ==  1) c.faceColors[FACE_TOP]    = COL_WHITE;
-                if (y == -1) c.faceColors[FACE_BOTTOM] = COL_YELLOW;
-                if (z ==  1) c.faceColors[FACE_FRONT]  = COL_GREEN;
-                if (z == -1) c.faceColors[FACE_BACK]   = COL_BLUE;
+                if (x ==  1) c.faceColors[RFACE_RIGHT]  = COL_RED;
+                if (x == -1) c.faceColors[RFACE_LEFT]   = COL_ORANGE;
+                if (y ==  1) c.faceColors[RFACE_TOP]    = COL_WHITE;
+                if (y == -1) c.faceColors[RFACE_BOTTOM] = COL_YELLOW;
+                if (z ==  1) c.faceColors[RFACE_FRONT]  = COL_GREEN;
+                if (z == -1) c.faceColors[RFACE_BACK]   = COL_BLUE;
             }
         }
+    }
+}
+
+// Rebuild cubie colors from the RubixCube model state
+void CubeRenderer::syncCubiesFromModel() {
+    // Map from RubixCube sticker positions to 3D cubie positions
+    // RubixCube face layout per face:
+    //   0(TL) 1(T) 2(TR)
+    //   7(L)       3(R)
+    //   6(BL) 5(B) 4(BR)
+    //
+    // Solver FACE_ORIENTATION: UP=0, LEFT=1, FRONT=2, RIGHT=3, BACK=4, BOTTOM=5
+    // Solver COLOR: WHITE=0, BLUE=1, RED=2, GREEN=3, ORANGE=4, YELLOW=5
+
+    static const glm::vec3 colorMap[] = {
+        COL_WHITE, COL_BLUE, COL_RED, COL_GREEN, COL_ORANGE, COL_YELLOW
+    };
+
+    // Reset all cubies to initial positions and black
+    cubieCount = 0;
+    for (int x = -1; x <= 1; x++) {
+        for (int y = -1; y <= 1; y++) {
+            for (int z = -1; z <= 1; z++) {
+                if (x == 0 && y == 0 && z == 0) continue;
+                Cubie& c = cubies[cubieCount++];
+                c.pos = glm::ivec3(x, y, z);
+                for (int f = 0; f < 6; f++) c.faceColors[f] = COL_BLACK;
+            }
+        }
+    }
+
+    // Helper: find the cubie at a given position
+    auto findCubie = [&](int x, int y, int z) -> Cubie* {
+        for (int i = 0; i < cubieCount; i++)
+            if (cubies[i].pos.x == x && cubies[i].pos.y == y && cubies[i].pos.z == z)
+                return &cubies[i];
+        return nullptr;
+    };
+
+    // Map face sticker index to (dx, dy) offset from face center in face-local coords
+    // Index: 0=TL 1=T 2=TR 3=R 4=BR 5=B 6=BL 7=L
+    static const int offsets[8][2] = {
+        {-1,1},{0,1},{1,1},{1,0},{1,-1},{0,-1},{-1,-1},{-1,0}
+    };
+
+    // FACE_UP (y=+1): face-local X=cube X, face-local Y=cube -Z
+    for (int s = 0; s < 8; s++) {
+        int color = GET_COLOR(cubeModel.get_face(FACE_UP), s);
+        int cx = offsets[s][0], cz = -offsets[s][1];
+        Cubie* c = findCubie(cx, 1, cz);
+        if (c) c->faceColors[RFACE_TOP] = colorMap[color];
+    }
+
+    // FACE_BOTTOM (y=-1)
+    for (int s = 0; s < 8; s++) {
+        int color = GET_COLOR(cubeModel.get_face(FACE_BOTTOM), s);
+        int cx = offsets[s][0], cz = offsets[s][1];
+        Cubie* c = findCubie(cx, -1, cz);
+        if (c) c->faceColors[RFACE_BOTTOM] = colorMap[color];
+    }
+
+    // FACE_FRONT (z=+1)
+    for (int s = 0; s < 8; s++) {
+        int color = GET_COLOR(cubeModel.get_face(FACE_FRONT), s);
+        int cx = offsets[s][0], cy = offsets[s][1];
+        Cubie* c = findCubie(cx, cy, 1);
+        if (c) c->faceColors[RFACE_FRONT] = colorMap[color];
+    }
+
+    // FACE_BACK (z=-1)
+    for (int s = 0; s < 8; s++) {
+        int color = GET_COLOR(cubeModel.get_face(FACE_BACK), s);
+        int cx = -offsets[s][0], cy = offsets[s][1];
+        Cubie* c = findCubie(cx, cy, -1);
+        if (c) c->faceColors[RFACE_BACK] = colorMap[color];
+    }
+
+    // FACE_RIGHT (x=+1)
+    for (int s = 0; s < 8; s++) {
+        int color = GET_COLOR(cubeModel.get_face(FACE_RIGHT), s);
+        int cz = -offsets[s][0], cy = offsets[s][1];
+        Cubie* c = findCubie(1, cy, cz);
+        if (c) c->faceColors[RFACE_RIGHT] = colorMap[color];
+    }
+
+    // FACE_LEFT (x=-1)
+    for (int s = 0; s < 8; s++) {
+        int color = GET_COLOR(cubeModel.get_face(FACE_LEFT), s);
+        int cz = offsets[s][0], cy = offsets[s][1];
+        Cubie* c = findCubie(-1, cy, cz);
+        if (c) c->faceColors[RFACE_LEFT] = colorMap[color];
+    }
+}
+
+// Apply a visual move and also apply it to the RubixCube model
+void CubeRenderer::applyMoveToModel(int axis, int layer, float direction) {
+    if (axis == 0 && layer == 1 && direction > 0)      cubeModel.R(1);
+    else if (axis == 0 && layer == 1 && direction < 0)  cubeModel.R_PRIME(1);
+    else if (axis == 0 && layer == -1 && direction < 0) cubeModel.L(1);
+    else if (axis == 0 && layer == -1 && direction > 0) cubeModel.L_PRIME(1);
+    else if (axis == 1 && layer == 1 && direction > 0)  cubeModel.U(1);
+    else if (axis == 1 && layer == 1 && direction < 0)  cubeModel.U_PRIME(1);
+    else if (axis == 1 && layer == -1 && direction < 0) cubeModel.D(1);
+    else if (axis == 1 && layer == -1 && direction > 0) cubeModel.D_PRIME(1);
+    else if (axis == 2 && layer == 1 && direction > 0)  cubeModel.F(1);
+    else if (axis == 2 && layer == 1 && direction < 0)  cubeModel.F_PRIME(1);
+    else if (axis == 2 && layer == -1 && direction < 0) cubeModel.B(1);
+    else if (axis == 2 && layer == -1 && direction > 0) cubeModel.B_PRIME(1);
+}
+
+// Parse a move string like "R U' F2" and enqueue each as animated moves
+void CubeRenderer::enqueueMoveString(const std::string& moveStr) {
+    std::istringstream iss(moveStr);
+    std::string tok;
+    while (iss >> tok) {
+        int axis = -1, layer = 0;
+        float dir = 1.0f;
+        int count = 1;
+
+        char base = tok[0];
+        bool prime = tok.find('\'') != std::string::npos;
+        bool dbl = tok.find('2') != std::string::npos;
+
+        if (base == 'R')      { axis = 0; layer =  1; dir =  1.0f; }
+        else if (base == 'L') { axis = 0; layer = -1; dir = -1.0f; }
+        else if (base == 'U') { axis = 1; layer =  1; dir =  1.0f; }
+        else if (base == 'D') { axis = 1; layer = -1; dir = -1.0f; }
+        else if (base == 'F') { axis = 2; layer =  1; dir =  1.0f; }
+        else if (base == 'B') { axis = 2; layer = -1; dir = -1.0f; }
+        else continue;
+
+        if (prime) dir = -dir;
+        if (dbl) count = 2;
+
+        for (int i = 0; i < count; i++)
+            enqueueMove(axis, layer, dir);
     }
 }
 
@@ -66,12 +202,12 @@ void CubeRenderer::commitMove(const MoveAnim& anim) {
 
     // The 6 face normals, indexed by Face enum
     static const glm::vec3 faceNormals[6] = {
-        { 1, 0, 0}, // FACE_RIGHT
-        {-1, 0, 0}, // FACE_LEFT
-        { 0, 1, 0}, // FACE_TOP
-        { 0,-1, 0}, // FACE_BOTTOM
-        { 0, 0, 1}, // FACE_FRONT
-        { 0, 0,-1}, // FACE_BACK
+        { 1, 0, 0}, // RFACE_RIGHT
+        {-1, 0, 0}, // RFACE_LEFT
+        { 0, 1, 0}, // RFACE_TOP
+        { 0,-1, 0}, // RFACE_BOTTOM
+        { 0, 0, 1}, // RFACE_FRONT
+        { 0, 0,-1}, // RFACE_BACK
     };
 
     for (int i = 0; i < cubieCount; i++) {
@@ -97,6 +233,8 @@ void CubeRenderer::commitMove(const MoveAnim& anim) {
             }
         }
     }
+
+    applyMoveToModel(anim.axis, anim.layer, anim.direction);
 }
 
 void CubeRenderer::addCubieFace(std::vector<float>& verts,
@@ -148,17 +286,12 @@ void CubeRenderer::buildVertices(std::vector<float>& verts) {
         };
         FaceDef faces[6] = {
             // Right (+X)
-            { {1,0,0}, {{h,-h,h},{h,h,h},{h,h,-h},{h,-h,-h}}, FACE_RIGHT },
-            // Left (-X)
-            { {-1,0,0}, {{-h,-h,-h},{-h,h,-h},{-h,h,h},{-h,-h,h}}, FACE_LEFT },
-            // Top (+Y)
-            { {0,1,0}, {{-h,h,h},{h,h,h},{h,h,-h},{-h,h,-h}}, FACE_TOP },
-            // Bottom (-Y)
-            { {0,-1,0}, {{-h,-h,-h},{h,-h,-h},{h,-h,h},{-h,-h,h}}, FACE_BOTTOM },
-            // Front (+Z)
-            { {0,0,1}, {{-h,-h,h},{h,-h,h},{h,h,h},{-h,h,h}}, FACE_FRONT },
-            // Back (-Z)
-            { {0,0,-1}, {{h,-h,-h},{-h,-h,-h},{-h,h,-h},{h,h,-h}}, FACE_BACK },
+            { {1,0,0}, {{h,-h,h},{h,h,h},{h,h,-h},{h,-h,-h}}, RFACE_RIGHT },
+            { {-1,0,0}, {{-h,-h,-h},{-h,h,-h},{-h,h,h},{-h,-h,h}}, RFACE_LEFT },
+            { {0,1,0}, {{-h,h,h},{h,h,h},{h,h,-h},{-h,h,-h}}, RFACE_TOP },
+            { {0,-1,0}, {{-h,-h,-h},{h,-h,-h},{h,-h,h},{-h,-h,h}}, RFACE_BOTTOM },
+            { {0,0,1}, {{-h,-h,h},{h,-h,h},{h,h,h},{-h,h,h}}, RFACE_FRONT },
+            { {0,0,-1}, {{h,-h,-h},{-h,-h,-h},{-h,h,-h},{h,h,-h}}, RFACE_BACK },
         };
 
         for (int f = 0; f < 6; f++) {
@@ -319,12 +452,44 @@ void CubeRenderer::processInput() {
     };
 
     //        key          axis  layer  cw-direction
-    tryMove(GLFW_KEY_R,    0,     1,    1.0f);   // R: X axis, layer +1, CW from +X
-    tryMove(GLFW_KEY_L,    0,    -1,   -1.0f);   // L: X axis, layer -1, CW from -X
-    tryMove(GLFW_KEY_U,    1,     1,    1.0f);   // U: Y axis, layer +1, CW from +Y
-    tryMove(GLFW_KEY_D,    1,    -1,   -1.0f);   // D: Y axis, layer -1, CW from -Y
-    tryMove(GLFW_KEY_F,    2,     1,    1.0f);   // F: Z axis, layer +1, CW from +Z
-    tryMove(GLFW_KEY_B,    2,    -1,   -1.0f);   // B: Z axis, layer -1, CW from -Z
+    tryMove(GLFW_KEY_R,    0,     1,    1.0f);
+    tryMove(GLFW_KEY_L,    0,    -1,   -1.0f);
+    tryMove(GLFW_KEY_U,    1,     1,    1.0f);
+    tryMove(GLFW_KEY_D,    1,    -1,   -1.0f);
+    tryMove(GLFW_KEY_F,    2,     1,    1.0f);
+    tryMove(GLFW_KEY_B,    2,    -1,   -1.0f);
+
+    // Space: solve the cube
+    {
+        bool pressed = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+        if (pressed && !keyStates[GLFW_KEY_SPACE] && !animating && moveQueue.empty()) {
+            RubixCube copy = cubeModel;
+            std::string solution = solver.Solve_Cube(copy, 8);
+            if (!solution.empty()) {
+                enqueueMoveString(solution);
+                std::cout << "Solution: " << solution << std::endl;
+            } else {
+                std::cout << "No solution found within depth limit" << std::endl;
+            }
+        }
+        keyStates[GLFW_KEY_SPACE] = pressed;
+    }
+
+    // M: scramble with 5 random moves
+    {
+        bool pressed = glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS;
+        if (pressed && !keyStates[GLFW_KEY_M] && !animating && moveQueue.empty()) {
+            const char* moves[] = {"R","R'","L","L'","U","U'","D","D'","F","F'","B","B'"};
+            std::string scramble;
+            for (int i = 0; i < 5; i++) {
+                if (i > 0) scramble += " ";
+                scramble += moves[rand() % 12];
+            }
+            std::cout << "Scramble: " << scramble << std::endl;
+            enqueueMoveString(scramble);
+        }
+        keyStates[GLFW_KEY_M] = pressed;
+    }
 }
 
 void CubeRenderer::cleanup() {
