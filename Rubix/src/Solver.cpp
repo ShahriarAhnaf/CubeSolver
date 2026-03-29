@@ -3,9 +3,7 @@
 #include <sstream>
 #include <iterator>
 
-#include <assert.h>
-#include <chrono>
-#include <thread>
+#include <algorithm>
 
 
 static long int DFS_count = 0;
@@ -46,40 +44,46 @@ bool Solver::matches_target(const RubixCube& cube, const TargetState& target) {
 // }
 Solver::~Solver(){}
 
-// the current cube is implicitly a reference
-std::string Solver::Solve_DFS(RubixCube current_cube, TargetState target_state, std::string Moves, int depth_remaining) {
-    static int DFS_count = 0;
-    // Check if we've reached the target state
+bool Solver::Solve_DFS_fast(RubixCube current_cube, const TargetState& target_state,
+                            std::vector<int>& path, int depth_remaining, int prev_move) {
     if (target_state.matches_cube(current_cube)) {
-        return Moves;
+        return true;
     }
-    // CHECK FOR REDUNDANT MOVES TODO
-
-    // If we've reached maximum depth, return empty string
     if (depth_remaining <= 0) {
-        return "";
+        return false;
     }
-    DFS_count++;
-    for (const std::string& move : Moveset) {
-        RubixCube cube_copy = current_cube;
-        cube_copy = Apply_Moves(cube_copy, move);
-        
-        return Solve_DFS(cube_copy, target_state, Moves + " " + move, depth_remaining - 1);
+
+    dfs_count++;
+    for (int i = 0; i < 18; i++) {
+        if (is_redundant_move_idx(i, prev_move)) continue;
+
+        RubixCube copy = current_cube;
+        copy.apply_move_index(i);
+        path.push_back(i);
+
+        if (Solve_DFS_fast(copy, target_state, path, depth_remaining - 1, i)) {
+            return true;
+        }
+        path.pop_back();
     }
-    // never reaching this point as the search space is too large
-    return "";
+    return false;
 }
 
-//returns "" if answer not found
-std::string Solver::Solve_IDFS(RubixCube given_cube, TargetState target_state, int Depth_Limit) {
-    // reset counter 
-    DFS_count = 0;
-    std::string nice = "";
-    for(int n = 1; n < Depth_Limit; n++) {
-        nice = Solve_DFS(given_cube, target_state, "", n);
-        if(nice != "") break; // exit loop when answer is found
+std::string Solver::Solve_IDFS(RubixCube given_cube, const TargetState& target_state, int Depth_Limit) {
+    dfs_count = 0;
+    std::vector<int> path;
+    for (int depth = 0; depth <= Depth_Limit; depth++) {
+        path.clear();
+        if (Solve_DFS_fast(given_cube, target_state, path, depth, -1)) {
+            std::string result;
+            for (int idx : path) {
+                if (!result.empty()) result += " ";
+                result += Moveset[idx];
+            }
+            return result;
+        }
     }
-    return nice;
+    return "";
 }
 
 //applys a series of moves
@@ -265,131 +269,152 @@ bool Solver::has_bottom_layer(RubixCube& cube) {
 
 std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
     std::string all_moves;
-    
-    // Step 1: Solve white cross
-    TargetState white_cross_target;
-    // Set up white cross target
-    for(int i = 0; i < 6; i++) {
-        if(i == FACE_UP) {
-            // Keep white center and edges
-            for(int j = 0; j < 8; j++) {
-                if(j == TOP || j == RIGHT || j == BOTTOM || j == LEFT) {
-                    SET_COLOR(white_cross_target.faces[i], j, WHITE);
-                }
-            }
-        } else {
-            // Keep only the top edge of each face
-            uint8_t color = i + 1;
-            SET_COLOR(white_cross_target.faces[i], TOP, color); // Set center color
-        }
-    }
-    
-    // Set bottom face and all other stickers as don't care
-    white_cross_target.set_face_dont_care(FACE_BOTTOM);
-    for(int i = 0; i < 6; i++) {
-        if(i != FACE_UP) {
-            for(int j = 0; j < 8; j++) {
-                if(j != TOP) {
-                    white_cross_target.set_dont_care(i, j);
-                }
-            }
-        }
-    }
-    
-    std::string cross_moves = Solve_IDFS(given_cube, white_cross_target, Depth_Limit);
-    if(cross_moves != "") {
-        given_cube = Apply_Moves(given_cube, cross_moves);
-        all_moves += cross_moves + " ";
+
+    // Quick solve: try direct full solve with small depth before step-by-step
+    TargetState quick_target;
+    RubixCube quick_solved;
+    for(int i = 0; i < 6; i++)
+        quick_target.faces[i] = quick_solved.get_face(i);
+
+    int quick_depth = std::min(Depth_Limit, 5);
+    std::string quick = Solve_IDFS(given_cube, quick_target, quick_depth);
+    if(!quick.empty()) {
+        given_cube = Apply_Moves(given_cube, quick);
+        return quick;
     }
 
-    // Step 2: Complete white face corners
-    TargetState white_corners_target;
-    
-    // Set up white corners target
-    for(int i = 0; i < 6; i++) {
-        if(i == FACE_UP) {
-            // Keep white face and corners
-            for(int j = 0; j < 8; j++) {
-                if(j == TOP_LEFT || j == TOP_RIGHT || j == BOTTOM_LEFT || j == BOTTOM_RIGHT) {
-                    SET_COLOR(white_corners_target.faces[i], j, WHITE);
-                }
-            }
-        } else {
-            // Keep only the corners of each face
-            uint8_t color = i + 1;
-            SET_COLOR(white_corners_target.faces[i], TOP_LEFT, color);
-            SET_COLOR(white_corners_target.faces[i], TOP_RIGHT, color);
-            SET_COLOR(white_corners_target.faces[i], BOTTOM_LEFT, color);
-            SET_COLOR(white_corners_target.faces[i], BOTTOM_RIGHT, color);
+    // Helper lambda to build a target that preserves two solved layers
+    auto set_two_layers = [](TargetState& t) {
+        for(int j = 0; j < 8; j++)
+            SET_COLOR(t.faces[FACE_UP], j, WHITE);
+        for(int i = FACE_LEFT; i <= FACE_BACK; i++) {
+            uint8_t c = i; // face index == solved color
+            SET_COLOR(t.faces[i], TOP_LEFT, c);
+            SET_COLOR(t.faces[i], TOP, c);
+            SET_COLOR(t.faces[i], TOP_RIGHT, c);
+            SET_COLOR(t.faces[i], RIGHT, c);
+            SET_COLOR(t.faces[i], LEFT, c);
+            t.set_dont_care(i, BOTTOM_LEFT);
+            t.set_dont_care(i, BOTTOM);
+            t.set_dont_care(i, BOTTOM_RIGHT);
         }
+        t.set_face_dont_care(FACE_BOTTOM);
+    };
+
+    // --- Step 1: White cross ---
+    // FACE_UP edges = WHITE, side face TOP edges = face color, everything else don't care
+    TargetState white_cross;
+    for(int j = 0; j < 8; j++) {
+        if(j == TOP || j == RIGHT || j == BOTTOM || j == LEFT)
+            SET_COLOR(white_cross.faces[FACE_UP], j, WHITE);
+        else
+            white_cross.set_dont_care(FACE_UP, j);
     }
-    
-    // Set bottom face and middle edges as don't care
-    white_corners_target.set_face_dont_care(FACE_BOTTOM);
-    for(int i = 0; i < 6; i++) {
-        if(i != FACE_UP) {
-            for(int j = 0; j < 8; j++) {
-                if(j != TOP_LEFT && j != TOP_RIGHT && j != BOTTOM_LEFT && j != BOTTOM_RIGHT) {
-                    white_corners_target.set_dont_care(i, j);
-                }
-            }
-        }
+    for(int i = FACE_LEFT; i <= FACE_BACK; i++) {
+        SET_COLOR(white_cross.faces[i], TOP, i);
+        for(int j = 0; j < 8; j++)
+            if(j != TOP) white_cross.set_dont_care(i, j);
     }
-    
-    std::string corner_moves = Solve_IDFS(given_cube, white_corners_target, Depth_Limit);
-    if(corner_moves != "") {
-        given_cube = Apply_Moves(given_cube, corner_moves);
-        all_moves += corner_moves + " ";
+    white_cross.set_face_dont_care(FACE_BOTTOM);
+
+    std::string moves = Solve_IDFS(given_cube, white_cross, Depth_Limit);
+    if(!moves.empty()) {
+        given_cube = Apply_Moves(given_cube, moves);
+        all_moves += moves;
     }
 
-    // Step 3: Solve second layer
-    TargetState second_layer_target;
-    
-    // Set up second layer target
-    for(int i = 0; i < 6; i++) {
-        if(i == FACE_UP) {
-            // Keep entire top face
-            for(int j = 0; j < 8; j++) {
-                SET_COLOR(second_layer_target.faces[i], j, WHITE);
-            }
-        } else {
-            // For side faces, keep only the middle edges
-            uint8_t color = i + 1;
-            SET_COLOR(second_layer_target.faces[i], LEFT, color);
-            SET_COLOR(second_layer_target.faces[i], RIGHT, color);
-        }
+    // --- Step 2: First layer (white face complete + top row of side faces) ---
+    TargetState first_layer;
+    for(int j = 0; j < 8; j++)
+        SET_COLOR(first_layer.faces[FACE_UP], j, WHITE);
+    for(int i = FACE_LEFT; i <= FACE_BACK; i++) {
+        uint8_t c = i;
+        SET_COLOR(first_layer.faces[i], TOP_LEFT, c);
+        SET_COLOR(first_layer.faces[i], TOP, c);
+        SET_COLOR(first_layer.faces[i], TOP_RIGHT, c);
+        for(int j = 0; j < 8; j++)
+            if(j != TOP_LEFT && j != TOP && j != TOP_RIGHT)
+                first_layer.set_dont_care(i, j);
     }
-    
-    // Set bottom face as don't care
-    second_layer_target.set_face_dont_care(FACE_BOTTOM);
+    first_layer.set_face_dont_care(FACE_BOTTOM);
 
-    // Set all bottom layer positions as don't care for all faces except FACE_UP
-    for(int i = 0; i < 6; i++) {
-        if(i != FACE_UP) {
-            second_layer_target.set_dont_care(i, BOTTOM_LEFT);
-            second_layer_target.set_dont_care(i, BOTTOM_RIGHT);
-            second_layer_target.set_dont_care(i, BOTTOM);
-        }
-    }
-    
-    std::string second_layer_moves = Solve_IDFS(given_cube, second_layer_target, Depth_Limit);
-    if(second_layer_moves != "") {
-        given_cube = Apply_Moves(given_cube, second_layer_moves);
-        all_moves += second_layer_moves + " ";
+    moves = Solve_IDFS(given_cube, first_layer, Depth_Limit);
+    if(!moves.empty()) {
+        given_cube = Apply_Moves(given_cube, moves);
+        all_moves += " " + moves;
     }
 
-    // Step 4: Solve bottom layer
-    TargetState solved_target;
+    // --- Step 3: Second layer (middle-layer edges) ---
+    TargetState second_layer;
+    set_two_layers(second_layer);
+
+    moves = Solve_IDFS(given_cube, second_layer, Depth_Limit);
+    if(!moves.empty()) {
+        given_cube = Apply_Moves(given_cube, moves);
+        all_moves += " " + moves;
+    }
+
+    // --- Step 4: Yellow cross (orient bottom-face edges) ---
+    TargetState yellow_cross;
+    set_two_layers(yellow_cross);
+    SET_COLOR(yellow_cross.faces[FACE_BOTTOM], TOP, YELLOW);
+    SET_COLOR(yellow_cross.faces[FACE_BOTTOM], RIGHT, YELLOW);
+    SET_COLOR(yellow_cross.faces[FACE_BOTTOM], BOTTOM, YELLOW);
+    SET_COLOR(yellow_cross.faces[FACE_BOTTOM], LEFT, YELLOW);
+    yellow_cross.set_relevant(FACE_BOTTOM, TOP);
+    yellow_cross.set_relevant(FACE_BOTTOM, RIGHT);
+    yellow_cross.set_relevant(FACE_BOTTOM, BOTTOM);
+    yellow_cross.set_relevant(FACE_BOTTOM, LEFT);
+
+    moves = Solve_IDFS(given_cube, yellow_cross, Depth_Limit);
+    if(!moves.empty()) {
+        given_cube = Apply_Moves(given_cube, moves);
+        all_moves += " " + moves;
+    }
+
+    // --- Step 5: Yellow face (orient all bottom-face stickers) ---
+    TargetState yellow_face;
+    set_two_layers(yellow_face);
+    for(int j = 0; j < 8; j++)
+        SET_COLOR(yellow_face.faces[FACE_BOTTOM], j, YELLOW);
+    yellow_face.set_face_relevant(FACE_BOTTOM);
+
+    moves = Solve_IDFS(given_cube, yellow_face, Depth_Limit);
+    if(!moves.empty()) {
+        given_cube = Apply_Moves(given_cube, moves);
+        all_moves += " " + moves;
+    }
+
+    // --- Step 6: Permute bottom corners ---
+    TargetState bottom_corners;
+    set_two_layers(bottom_corners);
+    for(int j = 0; j < 8; j++)
+        SET_COLOR(bottom_corners.faces[FACE_BOTTOM], j, YELLOW);
+    bottom_corners.set_face_relevant(FACE_BOTTOM);
+    for(int i = FACE_LEFT; i <= FACE_BACK; i++) {
+        uint8_t c = i;
+        SET_COLOR(bottom_corners.faces[i], BOTTOM_LEFT, c);
+        SET_COLOR(bottom_corners.faces[i], BOTTOM_RIGHT, c);
+        bottom_corners.set_relevant(i, BOTTOM_LEFT);
+        bottom_corners.set_relevant(i, BOTTOM_RIGHT);
+    }
+
+    moves = Solve_IDFS(given_cube, bottom_corners, Depth_Limit);
+    if(!moves.empty()) {
+        given_cube = Apply_Moves(given_cube, moves);
+        all_moves += " " + moves;
+    }
+
+    // --- Step 7: Permute bottom edges (full solve) ---
+    TargetState solved;
     RubixCube solved_cube;
-    // Create a solved cube state
-    for(int i = 0; i < 6; i++) {
-        solved_target.faces[i] = solved_cube.get_face(i);
-    }
-    
-    std::string bottom_layer_moves = Solve_IDFS(given_cube, solved_target, Depth_Limit);
-    if(bottom_layer_moves != "") {
-        given_cube = Apply_Moves(given_cube, bottom_layer_moves);
-        all_moves += bottom_layer_moves;
+    for(int i = 0; i < 6; i++)
+        solved.faces[i] = solved_cube.get_face(i);
+
+    moves = Solve_IDFS(given_cube, solved, Depth_Limit);
+    if(!moves.empty()) {
+        given_cube = Apply_Moves(given_cube, moves);
+        all_moves += " " + moves;
     }
 
     return all_moves;
