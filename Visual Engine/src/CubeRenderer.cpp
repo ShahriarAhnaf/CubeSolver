@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include <cmath>
+#include <random>
 
 static const float CUBIE_SIZE = 0.47f;
 static const float CUBIE_GAP  = 0.5f;  // center-to-center distance (slightly > CUBIE_SIZE for gaps)
@@ -485,10 +486,12 @@ void CubeRenderer::processInput() {
         bool pressed = glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS;
         if (pressed && !keyStates[GLFW_KEY_M] && !animating && moveQueue.empty()) {
             const char* moves[] = {"R","R'","L","L'","U","U'","D","D'","F","F'","B","B'"};
+            static std::mt19937 rng(std::random_device{}());
+            std::uniform_int_distribution<int> dist(0, 11);
             std::string scramble;
             for (int i = 0; i < 5; i++) {
                 if (i > 0) scramble += " ";
-                scramble += moves[rand() % 12];
+                scramble += moves[dist(rng)];
             }
             std::cout << "Scramble: " << scramble << std::endl;
             enqueueMoveString(scramble);
