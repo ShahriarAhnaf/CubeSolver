@@ -98,7 +98,7 @@ void test_solver_trivial() {
     std::cout << "[Solver: already solved]" << std::endl;
     RubixCube cube;
     Solver solver;
-    std::string solution = solver.Solve_Cube(cube, 5);
+    solver.Solve_Cube(cube, 5);
     check(is_cube_solved(cube), "Solved cube stays solved");
 }
 
