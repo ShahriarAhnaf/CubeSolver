@@ -551,6 +551,7 @@ GLuint CubeRenderer::createShader(GLenum type, const std::string& source) {
         char log[512];
         glGetShaderInfoLog(shader, 512, nullptr, log);
         std::cerr << "Shader compile error: " << log << std::endl;
+        glDeleteShader(shader);
         return 0;
     }
     return shader;
