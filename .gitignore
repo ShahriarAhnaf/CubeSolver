@@ -1,5 +1,19 @@
 /.vscode/
 *.out
 *.DS_Store
+
+# CMake
 build/
+buildnew/
 cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.a
+*.o
+
+# IDE
+.idea/
+*.swp
+*~

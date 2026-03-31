@@ -3,6 +3,8 @@
 #include <iostream>
 #include <cassert>
 #include <chrono>
+#include <random>
+#include <string>
 
 static int tests_passed = 0;
 static int tests_failed = 0;
@@ -160,6 +162,48 @@ void test_solver_three_moves() {
     }
 }
 
+void test_solver_random() {
+    std::cout << "[Solver: 100 random scrambles (20 moves each)]" << std::endl;
+
+    const char* moves[] = {"R","R'","R2","L","L'","L2","U","U'","U2",
+                           "D","D'","D2","F","F'","F2","B","B'","B2"};
+    Solver solver;
+    std::mt19937 rng(42);
+
+    int pass = 0, fail = 0;
+    long total_ms = 0;
+
+    for (int t = 0; t < 100; t++) {
+        std::string scramble;
+        for (int m = 0; m < 20; m++) {
+            if (m > 0) scramble += " ";
+            scramble += moves[rng() % 18];
+        }
+
+        RubixCube cube;
+        cube.apply_moves(scramble);
+
+        auto t0 = std::chrono::high_resolution_clock::now();
+        std::string solution = solver.Solve_Cube(cube, 20);
+        auto t1 = std::chrono::high_resolution_clock::now();
+        long ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+        total_ms += ms;
+
+        if (is_cube_solved(cube)) {
+            pass++;
+        } else {
+            fail++;
+            std::cout << "  FAIL #" << t << ": " << scramble << std::endl;
+            if (fail <= 3)
+                std::cout << "    Solution attempted: " << solution << std::endl;
+        }
+    }
+
+    std::string label = std::to_string(pass) + "/100 solved (" +
+                        std::to_string(total_ms) + "ms total)";
+    check(fail == 0, label.c_str());
+}
+
 int main() {
     std::cout << "=== Rubik's Cube Test Suite ===" << std::endl << std::endl;
 
@@ -173,6 +217,7 @@ int main() {
     test_solver_one_move();
     test_solver_two_moves();
     test_solver_three_moves();
+    test_solver_random();
 
     std::cout << std::endl;
     std::cout << "Results: " << tests_passed << " passed, "
