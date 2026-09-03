@@ -318,10 +318,9 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
     white_cross.set_face_dont_care(FACE_BOTTOM);
 
     std::string moves = Solve_IDFS(given_cube, white_cross, Depth_Limit);
-    if(!moves.empty()) {
-        given_cube = Apply_Moves(given_cube, moves);
-        all_moves += moves;
-    }
+    if(moves.empty()) return ""; // stage hit its depth cap: no solution, don't return partial moves
+    given_cube = Apply_Moves(given_cube, moves);
+    all_moves += moves;
 
     // --- Step 2: First layer (white face complete + top row of side faces) ---
     TargetState first_layer;
@@ -339,20 +338,18 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
     first_layer.set_face_dont_care(FACE_BOTTOM);
 
     moves = Solve_IDFS(given_cube, first_layer, Depth_Limit);
-    if(!moves.empty()) {
-        given_cube = Apply_Moves(given_cube, moves);
-        all_moves += " " + moves;
-    }
+    if(moves.empty()) return "";
+    given_cube = Apply_Moves(given_cube, moves);
+    all_moves += " " + moves;
 
     // --- Step 3: Second layer (middle-layer edges) ---
     TargetState second_layer;
     set_two_layers(second_layer);
 
     moves = Solve_IDFS(given_cube, second_layer, Depth_Limit);
-    if(!moves.empty()) {
-        given_cube = Apply_Moves(given_cube, moves);
-        all_moves += " " + moves;
-    }
+    if(moves.empty()) return "";
+    given_cube = Apply_Moves(given_cube, moves);
+    all_moves += " " + moves;
 
     // --- Step 4: Yellow cross (orient bottom-face edges) ---
     TargetState yellow_cross;
@@ -367,10 +364,9 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
     yellow_cross.set_relevant(FACE_BOTTOM, LEFT);
 
     moves = Solve_IDFS(given_cube, yellow_cross, Depth_Limit);
-    if(!moves.empty()) {
-        given_cube = Apply_Moves(given_cube, moves);
-        all_moves += " " + moves;
-    }
+    if(moves.empty()) return "";
+    given_cube = Apply_Moves(given_cube, moves);
+    all_moves += " " + moves;
 
     // --- Step 5: Yellow face (orient all bottom-face stickers) ---
     TargetState yellow_face;
@@ -380,10 +376,9 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
     yellow_face.set_face_relevant(FACE_BOTTOM);
 
     moves = Solve_IDFS(given_cube, yellow_face, Depth_Limit);
-    if(!moves.empty()) {
-        given_cube = Apply_Moves(given_cube, moves);
-        all_moves += " " + moves;
-    }
+    if(moves.empty()) return "";
+    given_cube = Apply_Moves(given_cube, moves);
+    all_moves += " " + moves;
 
     // --- Step 6: Permute bottom corners ---
     TargetState bottom_corners;
@@ -400,10 +395,9 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
     }
 
     moves = Solve_IDFS(given_cube, bottom_corners, Depth_Limit);
-    if(!moves.empty()) {
-        given_cube = Apply_Moves(given_cube, moves);
-        all_moves += " " + moves;
-    }
+    if(moves.empty()) return "";
+    given_cube = Apply_Moves(given_cube, moves);
+    all_moves += " " + moves;
 
     // --- Step 7: Permute bottom edges (full solve) ---
     TargetState solved;
@@ -412,10 +406,9 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
         solved.faces[i] = solved_cube.get_face(i);
 
     moves = Solve_IDFS(given_cube, solved, Depth_Limit);
-    if(!moves.empty()) {
-        given_cube = Apply_Moves(given_cube, moves);
-        all_moves += " " + moves;
-    }
+    if(moves.empty()) return "";
+    given_cube = Apply_Moves(given_cube, moves);
+    all_moves += " " + moves;
 
     return all_moves;
 }
