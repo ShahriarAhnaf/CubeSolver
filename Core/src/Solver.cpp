@@ -313,6 +313,40 @@ bool Solver::solve_with_algs(RubixCube& cube, const TargetState& target,
     return false;
 }
 
+static uint8_t d_row(const RubixCube& c, int face, int pos) { return GET_COLOR(c.get_face(face), pos); }
+// D turn that carries side face `from` to `to` (D moves the bottom row L->F->R->B).
+static const char* d_to(int from, int to) { return D_ROTATIONS[(to - from + 4) % 4]; }
+
+// Corner case by "headlights" (a side face whose two bottom corners match):
+// 4 = done, 1 = adjacent swap (T perm, lights on L), 0 = diagonal swap (Y perm).
+bool Solver::permute_corners(RubixCube& cube, const TargetState& target, std::string& out) {
+    int lights = 0, n = 0;
+    for (int f = FACE_LEFT; f <= FACE_BACK; f++)
+        if (d_row(cube, f, BOTTOM_LEFT) == d_row(cube, f, BOTTOM_RIGHT)) { lights = f; n++; }
+    std::string m;
+    if (n == 1) m = std::string(d_to(lights, FACE_LEFT)) + " " + LL_PERMUTE_CORNERS[0];
+    else if (n == 0) m = std::string(d_row(cube, FACE_FRONT, BOTTOM_RIGHT) % 2 ? "D " : "") + LL_PERMUTE_CORNERS[1];
+    if (!m.empty()) { cube = Apply_Moves(cube, m); out += " " + m; }
+    return solve_with_algs(cube, target, nullptr, 0, 0, out); // final D alignment only
+}
+
+// Edge case by edges matching their corners: 4 = done, 1 = 3-cycle (U perm with the solved edge
+// on B; F's edge from L -> Ub, from R -> Ua), 0 = H/Z, which one Ua turns into a 3-cycle.
+bool Solver::permute_edges(RubixCube& cube, const TargetState& target, std::string& out) {
+    int in = 0, n = 0;
+    for (int f = FACE_LEFT; f <= FACE_BACK; f++)
+        if (d_row(cube, f, BOTTOM) == d_row(cube, f, BOTTOM_RIGHT)) { in = f; n++; }
+    if (n == 4) return solve_with_algs(cube, target, nullptr, 0, 0, out);
+    std::string m = LL_PERMUTE_EDGES[0];
+    if (n == 1) {
+        RubixCube a = Apply_Moves(cube, d_to(in, FACE_BACK));
+        m = std::string(d_to(in, FACE_BACK)) + " " +
+            LL_PERMUTE_EDGES[d_row(a, FACE_FRONT, BOTTOM) == d_row(a, FACE_LEFT, BOTTOM_RIGHT)];
+    }
+    cube = Apply_Moves(cube, m); out += " " + m;
+    return permute_edges(cube, target, out);
+}
+
 bool Solver::solve_stage(RubixCube& cube, const TargetState& target, int depth_limit, std::string& all_moves) {
     if (target.matches_cube(cube)) return true;
     std::string moves = Solve_IDFS(cube, target, depth_limit);
@@ -446,7 +480,7 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
         bottom_corners.set_relevant(i, BOTTOM_RIGHT);
     }
 
-    if(!solve_with_algs(given_cube, bottom_corners, LL_PERMUTE_CORNERS, 2, 2, all_moves)) return "";
+    if(!permute_corners(given_cube, bottom_corners, all_moves)) return "";
 
     // --- Step 7: Permute bottom edges (full solve) ---
     TargetState solved;
@@ -454,7 +488,7 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
     for(int i = 0; i < 6; i++)
         solved.faces[i] = solved_cube.get_face(i);
 
-    if(!solve_with_algs(given_cube, solved, LL_PERMUTE_EDGES, 2, 2, all_moves)) return "";
+    if(!permute_edges(given_cube, solved, all_moves)) return "";
 
     return all_moves;
 }

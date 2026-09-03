@@ -97,6 +97,8 @@ private:
 	// rotations) at most `max_algs` deep until `target` matches. No search tree beyond that.
 	bool solve_with_algs(RubixCube& cube, const TargetState& target,
 	                           const char* const* algs, int num_algs, int max_algs, std::string& out);
+	bool permute_corners(RubixCube& cube, const TargetState& target, std::string& out);
+	bool permute_edges(RubixCube& cube, const TargetState& target, std::string& out);
 
 	bool has_white_cross(RubixCube& cube);
 	bool has_white_corners(RubixCube& cube);
