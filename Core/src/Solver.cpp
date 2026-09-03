@@ -268,10 +268,7 @@ bool Solver::has_bottom_layer(RubixCube& cube) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Last layer by 2-look OLL / PLL.
-// The first two layers are built with white on U, so the last layer is D. These are the standard
-// U-layer algorithms mirrored through the horizontal plane: swap U<->D and invert every turn.
-// A wrong entry here can't produce a wrong solution (the target check would fail), only a slower one.
+// 2-look OLL/PLL on the D layer: standard U-layer algorithms with U<->D swapped and every turn inverted.
 static const char* const LL_ORIENT_EDGES[]   = { "F' R' D' R D F",                      // line  (F R U R' U' F')
                                                  "F' D' R' D R F" };                    // L     (F U R U' R' F')
 static const char* const LL_ORIENT_CORNERS[] = { "R' D' R D' R' D2 R",                  // Sune
@@ -282,8 +279,7 @@ static const char* const LL_PERMUTE_EDGES[]  = { "R' D R' D' R' D' R' D R D R2",
                                                  "R2 D' R' D' R D R D R D' R" };        // Ub
 static const char* const D_ROTATIONS[4] = { "", "D", "D2", "D'" };
 
-// First-two-layer fallbacks, for a piece stuck in another slot (extract with one algorithm, insert with
-// the next). Slots in order FR, RB, BL, LF; each is the FR algorithm with the two faces substituted.
+// Beginner's-method insertions, one per slot (FR, RB, BL, LF), for a piece stuck in another slot.
 static const char* const F2L_CORNER_ALGS[] = { "R' D' R D", "B' D' B D", "L' D' L D", "F' D' F D" };
 static const char* const F2L_EDGE_ALGS[]   = { "D' R' D R D F D' F'", "D F D' F' D' R' D R",     // FR
                                                "D' B' D B D R D' R'", "D R D' R' D' B' D B",     // RB
@@ -292,7 +288,6 @@ static const char* const F2L_EDGE_ALGS[]   = { "D' R' D R D F D' F'", "D F D' F'
 
 bool Solver::solve_with_algs(RubixCube& cube, const TargetState& target,
                                    const char* const* algs, int num_algs, int max_algs, std::string& out) {
-    // Done, possibly after just aligning the layer.
     for (int rot = 0; rot < 4; rot++) {
         RubixCube aligned = Apply_Moves(cube, D_ROTATIONS[rot]);
         if (target.matches_cube(aligned)) {
@@ -321,7 +316,7 @@ bool Solver::solve_with_algs(RubixCube& cube, const TargetState& target,
 bool Solver::solve_stage(RubixCube& cube, const TargetState& target, int depth_limit, std::string& all_moves) {
     if (target.matches_cube(cube)) return true;
     std::string moves = Solve_IDFS(cube, target, depth_limit);
-    if (moves.empty()) return false; // depth cap hit
+    if (moves.empty()) return false;
     cube = Apply_Moves(cube, moves);
     if (!all_moves.empty()) all_moves += " ";
     all_moves += moves;
@@ -380,22 +375,21 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
 
     if(!solve_stage(given_cube, white_cross, Depth_Limit, all_moves)) return "";
 
-    // Steps 2 and 3 place one piece at a time: each search adds a piece to the cumulative target,
-    // so it stays shallow (a single insertion) and can't disturb what is already placed.
+    // Steps 2 and 3: one piece per search, added to a cumulative target.
     TargetState placed = white_cross;
     auto require = [&placed](uint8_t face, uint8_t pos) {
-        SET_COLOR(placed.faces[face], pos, face); // solved color == face index
+        SET_COLOR(placed.faces[face], pos, face);
         placed.set_relevant(face, pos);
     };
 
-    // --- Step 2: First layer corners (white sticker on U, two side stickers on the top row) ---
+    // --- Step 2: First layer corners ---
     const uint8_t corners[4][3][2] = {
         { {FACE_UP, TOP_LEFT},     {FACE_BACK,  TOP_RIGHT}, {FACE_LEFT,  TOP_LEFT}  },
         { {FACE_UP, TOP_RIGHT},    {FACE_BACK,  TOP_LEFT},  {FACE_RIGHT, TOP_RIGHT} },
         { {FACE_UP, BOTTOM_RIGHT}, {FACE_FRONT, TOP_RIGHT}, {FACE_RIGHT, TOP_LEFT}  },
         { {FACE_UP, BOTTOM_LEFT},  {FACE_FRONT, TOP_LEFT},  {FACE_LEFT,  TOP_RIGHT} },
     };
-    int piece_depth = std::min(Depth_Limit, 7); // deeper than this, the algorithm fallback is cheaper
+    int piece_depth = std::min(Depth_Limit, 7);
     for(int k = 0; k < 4; k++) {
         for(int s = 0; s < 3; s++) require(corners[k][s][0], corners[k][s][1]);
         if(!solve_stage(given_cube, placed, piece_depth, all_moves) &&
