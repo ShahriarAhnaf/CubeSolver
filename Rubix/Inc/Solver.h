@@ -98,7 +98,16 @@ private:
         
         // Same face moves are redundant
         if (current_base == prev_base) return true;
-        
+
+        // Opposite faces commute (R L == L R), so only allow one ordering of the pair.
+        // Pairs: L/R, U/D, F/B. Allow the alphabetically-later face first (R before L, U before D, F before B).
+        auto opposite = [](char a, char b) {
+            return (a == 'L' && b == 'R') || (a == 'R' && b == 'L') ||
+                   (a == 'U' && b == 'D') || (a == 'D' && b == 'U') ||
+                   (a == 'F' && b == 'B') || (a == 'B' && b == 'F');
+        };
+        if (opposite(current_base, prev_base) && current_base > prev_base) return true;
+
         // Check if current move would undo previous move
         if (current_base == prev_base) {
             // If previous was prime and current is not, or vice versa

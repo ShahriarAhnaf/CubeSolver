@@ -48,7 +48,6 @@ Solver::~Solver(){}
 
 // the current cube is implicitly a reference
 std::string Solver::Solve_DFS(RubixCube current_cube, TargetState target_state, std::string Moves, int depth_remaining) {
-    static int DFS_count = 0;
     // Check if we've reached the target state
     if (target_state.matches_cube(current_cube)) {
         return Moves;
@@ -58,7 +57,7 @@ std::string Solver::Solve_DFS(RubixCube current_cube, TargetState target_state, 
     if (depth_remaining <= 0) {
         return "";
     }
-    DFS_count++;
+    dfs_count++; // exposed via get_dfs_count()
     std::string previous_move = Moves.substr(Moves.rfind(' ') + 1); // "" when Moves is empty
     for (const std::string& move : Moveset) {
         if (is_redundant_move(move, previous_move)) continue;
