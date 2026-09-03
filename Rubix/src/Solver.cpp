@@ -53,18 +53,20 @@ std::string Solver::Solve_DFS(RubixCube current_cube, TargetState target_state, 
     if (target_state.matches_cube(current_cube)) {
         return Moves;
     }
-    // CHECK FOR REDUNDANT MOVES TODO
 
     // If we've reached maximum depth, return empty string
     if (depth_remaining <= 0) {
         return "";
     }
     DFS_count++;
+    std::string previous_move = Moves.substr(Moves.rfind(' ') + 1); // "" when Moves is empty
     for (const std::string& move : Moveset) {
+        if (is_redundant_move(move, previous_move)) continue;
         RubixCube cube_copy = current_cube;
         cube_copy = Apply_Moves(cube_copy, move);
-        
-        return Solve_DFS(cube_copy, target_state, Moves + " " + move, depth_remaining - 1);
+
+        std::string result = Solve_DFS(cube_copy, target_state, Moves + " " + move, depth_remaining - 1);
+        if (result != "") return result; // found; otherwise try the next move
     }
     // never reaching this point as the search space is too large
     return "";
@@ -279,13 +281,17 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
             }
         } else {
             // Keep only the top edge of each face
-            uint8_t color = i + 1;
+            uint8_t color = i; // face i is solved when its stickers are color i
             SET_COLOR(white_cross_target.faces[i], TOP, color); // Set center color
         }
     }
     
     // Set bottom face and all other stickers as don't care
     white_cross_target.set_face_dont_care(FACE_BOTTOM);
+    white_cross_target.set_dont_care(FACE_UP, TOP_LEFT);
+    white_cross_target.set_dont_care(FACE_UP, TOP_RIGHT);
+    white_cross_target.set_dont_care(FACE_UP, BOTTOM_LEFT);
+    white_cross_target.set_dont_care(FACE_UP, BOTTOM_RIGHT);
     for(int i = 0; i < 6; i++) {
         if(i != FACE_UP) {
             for(int j = 0; j < 8; j++) {
@@ -316,11 +322,10 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
             }
         } else {
             // Keep only the corners of each face
-            uint8_t color = i + 1;
+            uint8_t color = i; // face i is solved when its stickers are color i
             SET_COLOR(white_corners_target.faces[i], TOP_LEFT, color);
             SET_COLOR(white_corners_target.faces[i], TOP_RIGHT, color);
-            SET_COLOR(white_corners_target.faces[i], BOTTOM_LEFT, color);
-            SET_COLOR(white_corners_target.faces[i], BOTTOM_RIGHT, color);
+            SET_COLOR(white_corners_target.faces[i], TOP, color); // keep the cross from step 1
         }
     }
     
@@ -329,7 +334,7 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
     for(int i = 0; i < 6; i++) {
         if(i != FACE_UP) {
             for(int j = 0; j < 8; j++) {
-                if(j != TOP_LEFT && j != TOP_RIGHT && j != BOTTOM_LEFT && j != BOTTOM_RIGHT) {
+                if(j != TOP_LEFT && j != TOP_RIGHT && j != TOP) {
                     white_corners_target.set_dont_care(i, j);
                 }
             }
@@ -354,9 +359,12 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
             }
         } else {
             // For side faces, keep only the middle edges
-            uint8_t color = i + 1;
+            uint8_t color = i; // face i is solved when its stickers are color i
             SET_COLOR(second_layer_target.faces[i], LEFT, color);
             SET_COLOR(second_layer_target.faces[i], RIGHT, color);
+            SET_COLOR(second_layer_target.faces[i], TOP_LEFT, color); // keep the first layer from steps 1-2
+            SET_COLOR(second_layer_target.faces[i], TOP, color);
+            SET_COLOR(second_layer_target.faces[i], TOP_RIGHT, color);
         }
     }
     
@@ -392,6 +400,8 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
         all_moves += bottom_layer_moves;
     }
 
+    // A stage that hit its depth limit leaves the cube unsolved; don't report its partial moves as a solution.
+    if (!(given_cube == RubixCube())) return "";
     return all_moves;
 }
 

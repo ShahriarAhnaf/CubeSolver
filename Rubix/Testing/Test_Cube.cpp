@@ -1,3 +1,5 @@
+// Release builds define NDEBUG, which would compile every assert below away.
+#undef NDEBUG
 #include "Cube.h"
 #include "Solver.h"
 #include <iostream>
@@ -38,12 +40,14 @@ void test_sequence_moves() {
     std::cout << "Testing sequence moves..." << std::endl;
     RubixCube cube;
     
-    // Test R U R' U' sequence
-    cube.R(1);
-    cube.U(1);
-    cube.R_PRIME(1);
-    cube.U_PRIME(1);
-    assert(is_cube_solved(cube));
+    // R U R' U' has order 6: not solved after one repetition, solved after six
+    for (int i = 0; i < 6; i++) {
+        cube.R(1);
+        cube.U(1);
+        cube.R_PRIME(1);
+        cube.U_PRIME(1);
+        assert(is_cube_solved(cube) == (i == 5));
+    }
     
     std::cout << "Sequence moves test passed!" << std::endl;
 }
@@ -58,10 +62,14 @@ void test_solver() {
     cube.R_PRIME(1);
     cube.U_PRIME(1);
     
-    // Create solver and solve
+    // Create solver and solve. Solve_Cube works on (and solves) the cube passed to it,
+    // so hand it a copy and replay the returned moves on the original.
     Solver solver;
-    std::string solution = solver.Solve_Cube(cube, 4);
-    
+    RubixCube work = cube;
+    std::string solution = solver.Solve_Cube(work, 6); // the 4-move inverse needs depth > 4
+    assert(!solution.empty());
+    assert(is_cube_solved(work));
+
     // Apply solution
     cube.apply_moves(solution);
     assert(is_cube_solved(cube));
