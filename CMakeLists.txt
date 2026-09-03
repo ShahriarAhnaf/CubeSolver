@@ -77,6 +77,14 @@ add_custom_command(TARGET RubiksCubeVisualizer POST_BUILD
     ${CMAKE_CURRENT_BINARY_DIR}/shaders
 )
 
+# --- Terminal app (ncurses) ---
+find_package(Curses)
+if(CURSES_FOUND)
+    add_executable(CubeSolver Rubix/src/main.cpp Rubix/src/Draw.cpp)
+    target_include_directories(CubeSolver PRIVATE Rubix/Inc ${CURSES_INCLUDE_DIRS})
+    target_link_libraries(CubeSolver PRIVATE CubeCore ${CURSES_LIBRARIES})
+endif()
+
 # --- Tests (no ncurses needed) ---
 add_executable(Test_Cube
     Rubix/Testing/Test_Cube.cpp
