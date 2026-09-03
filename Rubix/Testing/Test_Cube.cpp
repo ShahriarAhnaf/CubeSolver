@@ -221,16 +221,19 @@ void test_solver_full_scrambles() {
         "D2 F2 D' L F2 B2 B2 D2 D2 F D2 R2 D2 F' R2 L2 U' D L' L F' B2 L2 D2 F'",
         "U L' D2 U' L2 L2 L2 L' B2 R' U2 D' F2 L U2 B2 F D2 F B2 B D2 U' F L" };
     Solver solver;
+    std::string staged; // stage callbacks, concatenated, must equal the returned solution
+    solver.on_stage = [&staged](const std::string& m) { staged += m; };
     for (const char* scramble : scrambles) {
         RubixCube cube;
         cube.apply_moves(scramble);
         RubixCube original = cube;
+        staged.clear();
         auto t0 = std::chrono::high_resolution_clock::now();
         std::string solution = solver.Solve_Cube(cube, 8);
         auto t1 = std::chrono::high_resolution_clock::now();
         long ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
         original.apply_moves(solution); // the returned moves, replayed, must solve the original
-        bool ok = !solution.empty() && is_cube_solved(cube) && is_cube_solved(original);
+        bool ok = !solution.empty() && is_cube_solved(cube) && is_cube_solved(original) && staged == solution;
         std::string label = std::string("Scramble: ") + scramble + " (" + std::to_string(ms) + "ms)";
         check(ok, label.c_str());
     }

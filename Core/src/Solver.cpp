@@ -359,6 +359,11 @@ bool Solver::solve_stage(RubixCube& cube, const TargetState& target, int depth_l
 
 std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
     std::string all_moves;
+    size_t reported = 0;
+    auto report = [&]() {
+        if (on_stage && all_moves.size() > reported) on_stage(all_moves.substr(reported));
+        reported = all_moves.size();
+    };
 
     // Quick solve: try direct full solve with small depth before step-by-step
     TargetState quick_target;
@@ -370,6 +375,7 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
     std::string quick = Solve_IDFS(given_cube, quick_target, quick_depth);
     if(!quick.empty()) {
         given_cube = Apply_Moves(given_cube, quick);
+        if (on_stage) on_stage(quick);
         return quick;
     }
 
@@ -416,6 +422,7 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
         placed.set_relevant(face, pos);
     };
 
+    report();
     // --- Step 2: First layer corners ---
     const uint8_t corners[4][3][2] = {
         { {FACE_UP, TOP_LEFT},     {FACE_BACK,  TOP_RIGHT}, {FACE_LEFT,  TOP_LEFT}  },
@@ -430,6 +437,7 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
            !solve_with_algs(given_cube, placed, F2L_CORNER_ALGS, 4, 6, all_moves)) return "";
     }
 
+    report();
     // --- Step 3: Second layer edges ---
     const uint8_t edges[4][2][2] = {
         { {FACE_FRONT, RIGHT}, {FACE_RIGHT, LEFT}  },
@@ -443,6 +451,7 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
            !solve_with_algs(given_cube, placed, F2L_EDGE_ALGS, 8, 2, all_moves)) return "";
     }
 
+    report();
     // --- Step 4: Yellow cross (orient bottom-face edges) ---
     TargetState yellow_cross;
     set_two_layers(yellow_cross);
@@ -457,6 +466,7 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
 
     if(!solve_with_algs(given_cube, yellow_cross, LL_ORIENT_EDGES, 2, 2, all_moves)) return "";
 
+    report();
     // --- Step 5: Yellow face (orient all bottom-face stickers) ---
     TargetState yellow_face;
     set_two_layers(yellow_face);
@@ -466,6 +476,7 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
 
     if(!solve_with_algs(given_cube, yellow_face, LL_ORIENT_CORNERS, 2, 2, all_moves)) return "";
 
+    report();
     // --- Step 6: Permute bottom corners ---
     TargetState bottom_corners;
     set_two_layers(bottom_corners);
@@ -482,6 +493,7 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
 
     if(!permute_corners(given_cube, bottom_corners, all_moves)) return "";
 
+    report();
     // --- Step 7: Permute bottom edges (full solve) ---
     TargetState solved;
     RubixCube solved_cube;
@@ -489,6 +501,7 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
         solved.faces[i] = solved_cube.get_face(i);
 
     if(!permute_edges(given_cube, solved, all_moves)) return "";
+    report();
 
     return all_moves;
 }

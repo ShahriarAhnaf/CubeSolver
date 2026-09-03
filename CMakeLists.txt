@@ -61,8 +61,10 @@ target_include_directories(RubiksCubeVisualizer PRIVATE
     ${glad_SOURCE_DIR}/include
     ${glm_SOURCE_DIR}
 )
+find_package(Threads REQUIRED)
 target_link_libraries(RubiksCubeVisualizer PRIVATE
     CubeCore
+    Threads::Threads
     ${OPENGL_LIBRARIES}
     glfw
     glad

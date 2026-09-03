@@ -2,6 +2,7 @@
 #include "Cube.h"
 #include <string>
 #include <vector>
+#include <functional>
 
 enum {
 		halal_cross=1,
@@ -138,6 +139,8 @@ public:
 		return cube == RubixCube(); // matching a solved cube
 	}
 	std::string Solve_Cube(RubixCube &given_cube, int Depth_Limit);
+	// Called with the moves of each finished stage while Solve_Cube runs (may be empty).
+	std::function<void(const std::string&)> on_stage;
 	void visualize_state();
 	void scramble();
 	RubixCube Apply_Moves(RubixCube &El_Cube, std::string leMoves);

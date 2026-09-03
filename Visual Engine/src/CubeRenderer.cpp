@@ -18,6 +18,10 @@ CubeRenderer::CubeRenderer()
 {
     memset(keyStates, 0, sizeof(keyStates));
     currentAnim = {};
+    solver.on_stage = [this](const std::string& moves) {
+        std::lock_guard<std::mutex> lock(stageMutex);
+        stageMoves.push_back(moves);
+    };
 }
 
 CubeRenderer::~CubeRenderer() {
@@ -374,6 +378,18 @@ void CubeRenderer::render() {
 
         processInput();
 
+        // Pull finished solver stages into the animation queue
+        {
+            std::lock_guard<std::mutex> lock(stageMutex);
+            for (const std::string& m : stageMoves) enqueueMoveString(m);
+            stageMoves.clear();
+        }
+        if (solving() && solveFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+            std::string solution = solveFuture.get();
+            if (solution.empty()) std::cout << "No solution found within depth limit" << std::endl;
+            else std::cout << "Solution: " << solution << std::endl;
+        }
+
         // Advance animation
         if (!animating && !moveQueue.empty()) {
             currentAnim = moveQueue.front();
@@ -449,7 +465,7 @@ void CubeRenderer::processInput() {
     // Moves: R, L, U, D, F, B -- hold Shift for prime (counter-clockwise)
     auto tryMove = [&](int key, int axis, int layer, float cwDir) {
         bool pressed = glfwGetKey(window, key) == GLFW_PRESS;
-        if (pressed && !keyStates[key]) {
+        if (pressed && !keyStates[key] && !solving()) {
             bool shift = (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
                           glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
             enqueueMove(axis, layer, shift ? -cwDir : cwDir);
@@ -468,15 +484,10 @@ void CubeRenderer::processInput() {
     // Space: solve the cube
     {
         bool pressed = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
-        if (pressed && !keyStates[GLFW_KEY_SPACE] && !animating && moveQueue.empty()) {
+        if (pressed && !keyStates[GLFW_KEY_SPACE] && !animating && moveQueue.empty() && !solving()) {
             RubixCube copy = cubeModel;
-            std::string solution = solver.Solve_Cube(copy, 8);
-            if (!solution.empty()) {
-                enqueueMoveString(solution);
-                std::cout << "Solution: " << solution << std::endl;
-            } else {
-                std::cout << "No solution found within depth limit" << std::endl;
-            }
+            solveFuture = std::async(std::launch::async,
+                                     [this, copy]() mutable { return solver.Solve_Cube(copy, 8); });
         }
         keyStates[GLFW_KEY_SPACE] = pressed;
     }
@@ -484,7 +495,7 @@ void CubeRenderer::processInput() {
     // M: scramble with 5 random moves
     {
         bool pressed = glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS;
-        if (pressed && !keyStates[GLFW_KEY_M] && !animating && moveQueue.empty()) {
+        if (pressed && !keyStates[GLFW_KEY_M] && !animating && moveQueue.empty() && !solving()) {
             const char* moves[] = {"R","R'","L","L'","U","U'","D","D'","F","F'","B","B'"};
             static std::mt19937 rng(std::random_device{}());
             std::uniform_int_distribution<int> dist(0, 11);
