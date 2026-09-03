@@ -45,7 +45,7 @@ bool Solver::matches_target(const RubixCube& cube, const TargetState& target) {
 Solver::~Solver(){}
 
 bool Solver::Solve_DFS_fast(RubixCube current_cube, const TargetState& target_state,
-                            std::vector<int>& path, int depth_remaining, int prev_move) {
+                            int depth, int depth_remaining, int prev_move) {
     if (target_state.matches_cube(current_cube)) {
         return true;
     }
@@ -59,26 +59,24 @@ bool Solver::Solve_DFS_fast(RubixCube current_cube, const TargetState& target_st
 
         RubixCube copy = current_cube;
         copy.apply_move_index(i);
-        path.push_back(i);
+        path[depth] = i;
 
-        if (Solve_DFS_fast(copy, target_state, path, depth_remaining - 1, i)) {
+        if (Solve_DFS_fast(copy, target_state, depth + 1, depth_remaining - 1, i)) {
             return true;
         }
-        path.pop_back();
     }
     return false;
 }
 
 std::string Solver::Solve_IDFS(RubixCube given_cube, const TargetState& target_state, int Depth_Limit) {
     dfs_count = 0;
-    std::vector<int> path;
+    if (Depth_Limit > MAX_DEPTH) Depth_Limit = MAX_DEPTH;
     for (int depth = 0; depth <= Depth_Limit; depth++) {
-        path.clear();
-        if (Solve_DFS_fast(given_cube, target_state, path, depth, -1)) {
+        if (Solve_DFS_fast(given_cube, target_state, 0, depth, -1)) {
             std::string result;
-            for (int idx : path) {
-                if (!result.empty()) result += " ";
-                result += Moveset[idx];
+            for (int k = 0; k < depth; k++) {
+                if (k) result += " ";
+                result += Moveset[path[k]];
             }
             return result;
         }
@@ -90,15 +88,9 @@ std::string Solver::Solve_IDFS(RubixCube given_cube, const TargetState& target_s
 RubixCube Solver::Apply_Moves(RubixCube &El_cube, std::string leMoves){
     RubixCube Local_Copy_Cube; // stack solved cube 
     Local_Copy_Cube = El_cube; // supposed to copy over dem values
-    std::vector<std::string> tokens;
- 
     std::istringstream iss(leMoves);
-    std::string s;
-    while (iss >> s) {
-        tokens.push_back(s);
-    }
-    // for each move in the string
-    for(const std::string &Move : tokens){
+    std::string Move;
+    while (iss >> Move) {
             if (Move == "L"){
                 Local_Copy_Cube.L(1);
                 }

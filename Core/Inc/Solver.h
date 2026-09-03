@@ -1,7 +1,6 @@
 #pragma once
 #include "Cube.h"
 #include <string>
-#include <vector>
 #include <functional>
 
 enum {
@@ -87,8 +86,10 @@ private:
     bool matches_target(const RubixCube& cube, const TargetState& target);
 
 	std::string Solve_IDFS(RubixCube given_cube, const TargetState& target_state, int Depth_Limit);
+	static const int MAX_DEPTH = 12;
+	int path[MAX_DEPTH];
 	bool Solve_DFS_fast(RubixCube current_cube, const TargetState& target_state,
-	                    std::vector<int>& path, int depth_remaining, int prev_move);
+	                    int depth, int depth_remaining, int prev_move);
 
 	// One search stage: search for `target` up to depth_limit and append the moves. Returns false only
 	// when the target is out of reach; an already-satisfied target is success with no moves.
