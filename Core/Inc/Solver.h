@@ -89,6 +89,15 @@ private:
 	bool Solve_DFS_fast(RubixCube current_cube, const TargetState& target_state,
 	                    std::vector<int>& path, int depth_remaining, int prev_move);
 
+	// One search stage: search for `target` up to depth_limit and append the moves. Returns false only
+	// when the target is out of reach; an already-satisfied target is success with no moves.
+	bool solve_stage(RubixCube& cube, const TargetState& target, int depth_limit, std::string& all_moves);
+
+	// Speedcuber style: try a short list of known algorithms (each after one of the four D-layer
+	// rotations) at most `max_algs` deep until `target` matches. No search tree beyond that.
+	bool solve_with_algs(RubixCube& cube, const TargetState& target,
+	                           const char* const* algs, int num_algs, int max_algs, std::string& out);
+
 	bool has_white_cross(RubixCube& cube);
 	bool has_white_corners(RubixCube& cube);
 	bool has_second_layer(RubixCube& cube);
