@@ -1,4 +1,80 @@
-/.vscode/
+# Build directories
+build/
+bin/
+lib/
+out/
+Debug/
+Release/
+x64/
+x86/
+
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+_deps/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.user
+*.suo
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
 *.out
-*.DS_Store
-/build/*
+*.app
+*.dSYM/
+
+# macOS specific
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Testing
+CTestTestfile.cmake
+coverage/
+*.gcno
+*.gcda
+*.gcov
+
+# Shader compilation artifacts
+*.spv
+*.spirv
+
+# Log files
+*.log
+*.tlog
+*.lastbuildstate
+
+# Temporary files
+*.tmp
+*.temp
+*.bak

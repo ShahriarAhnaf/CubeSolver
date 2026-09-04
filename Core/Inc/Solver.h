@@ -105,8 +105,13 @@ private:
         if (prev_idx < 0) return false;
         int cur_group = current_idx / 3;
         int prev_group = prev_idx / 3;
+        // Same face group: sequences like L followed by L' or L2 are redundant
         if (cur_group == prev_group) return true;
-        if (cur_group % 2 == 0 && prev_group == cur_group + 1) return true;
+        // Opposite face groups: prune both directions (e.g., L after R and R after L)
+        int diff = cur_group - prev_group;
+        if (diff < 0) diff = -diff;
+        int min_group = (cur_group < prev_group) ? cur_group : prev_group;
+        if (diff == 1 && (min_group % 2 == 0)) return true;
         return false;
     }
 
