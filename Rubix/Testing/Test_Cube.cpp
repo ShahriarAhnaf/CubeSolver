@@ -160,6 +160,85 @@ void test_solver_three_moves() {
     }
 }
 
+// ------ Human-method algorithm tables ------
+
+// Compare the stickers selected by `mask` (same layout on every side face) plus the whole U face.
+static bool first_layer_and(const RubixCube& cube, uint64_t side_mask) {
+    RubixCube solved;
+    if (cube.get_face(FACE_UP) != solved.get_face(FACE_UP)) return false;
+    for (int f = FACE_LEFT; f <= FACE_BACK; f++)
+        if ((cube.get_face(f) & side_mask) != (solved.get_face(f) & side_mask)) return false;
+    return true;
+}
+
+void test_algorithms_preserve_layers() {
+    std::cout << "[Algorithm tables leave finished layers alone]" << std::endl;
+    const uint64_t TOP_ROW = 0xFFFFFF0000000000ULL;        // positions 0,1,2
+    const uint64_t TOP_ROW_AND_MIDDLE = 0xFFFFFFFF000000FFULL; // positions 0,1,2,3,7
+
+    // Last-layer algorithms (D layer) must keep the first two layers.
+    const char* last_layer[] = {
+        "F' R' D' R D F", "F' D' R' D R F",                                         // orient edges
+        "R' D' R D' R' D2 R", "R' D2 R D R' D R",                                   // orient corners
+        "R' D' R D R F' R2 D R D R' D' R F", "F' R' D R D R' D' R F R' D' R D R F' R' F", // permute corners
+        "R' D R' D' R' D' R' D R D R2", "R2 D' R' D' R D R D R D' R" };           // permute edges
+    for (const char* alg : last_layer) {
+        RubixCube cube;
+        cube.apply_moves(alg);
+        check(first_layer_and(cube, TOP_ROW_AND_MIDDLE), (std::string("LL keeps F2L: ") + alg).c_str());
+    }
+
+    // Second-layer insertions must keep the first layer.
+    const char* edge_insert[] = {
+        "D' R' D R D F D' F'", "D F D' F' D' R' D R", "D' B' D B D R D' R'", "D R D' R' D' B' D B",
+        "D' L' D L D B D' B'", "D B D' B' D' L' D L", "D' F' D F D L D' L'", "D L D' L' D' F' D F" };
+    for (const char* alg : edge_insert) {
+        RubixCube cube;
+        cube.apply_moves(alg);
+        check(first_layer_and(cube, TOP_ROW), (std::string("insertion keeps first layer: ") + alg).c_str());
+    }
+
+    // Corner insertions touch one first-layer corner; the white cross must survive.
+    const char* corner_insert[] = { "R' D' R D", "B' D' B D", "L' D' L D", "F' D' F D" };
+    RubixCube solved;
+    for (const char* alg : corner_insert) {
+        RubixCube cube;
+        cube.apply_moves(alg);
+        bool ok = true;
+        for (int pos : {TOP, RIGHT, BOTTOM, LEFT})
+            ok = ok && GET_COLOR(cube.get_face(FACE_UP), pos) == WHITE;
+        for (int f = FACE_LEFT; f <= FACE_BACK; f++)
+            ok = ok && GET_COLOR(cube.get_face(f), TOP) == GET_COLOR(solved.get_face(f), TOP);
+        check(ok, (std::string("corner insertion keeps cross: ") + alg).c_str());
+    }
+}
+
+void test_solver_full_scrambles() {
+    std::cout << "[Solver: full 25-move scrambles]" << std::endl;
+    const char* scrambles[] = {
+        "L2 F' D R U B' L D2 R' F U2 B L' F2 D' R2 U L B2 D F' R U' L2 B",
+        "F R' B' L2 R2 B' B2 F L B' U2 B' R' B' U D' L' L' B2 U2 B B2 U' D2 B",
+        "D2 F2 D' L F2 B2 B2 D2 D2 F D2 R2 D2 F' R2 L2 U' D L' L F' B2 L2 D2 F'",
+        "U L' D2 U' L2 L2 L2 L' B2 R' U2 D' F2 L U2 B2 F D2 F B2 B D2 U' F L" };
+    Solver solver;
+    std::string staged; // stage callbacks, concatenated, must equal the returned solution
+    solver.on_stage = [&staged](const std::string& m) { staged += m; };
+    for (const char* scramble : scrambles) {
+        RubixCube cube;
+        cube.apply_moves(scramble);
+        RubixCube original = cube;
+        staged.clear();
+        auto t0 = std::chrono::high_resolution_clock::now();
+        std::string solution = solver.Solve_Cube(cube, 8);
+        auto t1 = std::chrono::high_resolution_clock::now();
+        long ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+        original.apply_moves(solution); // the returned moves, replayed, must solve the original
+        bool ok = !solution.empty() && is_cube_solved(cube) && is_cube_solved(original) && staged == solution;
+        std::string label = std::string("Scramble: ") + scramble + " (" + std::to_string(ms) + "ms)";
+        check(ok, label.c_str());
+    }
+}
+
 int main() {
     std::cout << "=== Rubik's Cube Test Suite ===" << std::endl << std::endl;
 
@@ -173,6 +252,8 @@ int main() {
     test_solver_one_move();
     test_solver_two_moves();
     test_solver_three_moves();
+    test_algorithms_preserve_layers();
+    test_solver_full_scrambles();
 
     std::cout << std::endl;
     std::cout << "Results: " << tests_passed << " passed, "

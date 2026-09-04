@@ -1,7 +1,7 @@
 #pragma once
 #include "Cube.h"
 #include <string>
-#include <vector>
+#include <functional>
 
 enum {
 		halal_cross=1,
@@ -86,8 +86,21 @@ private:
     bool matches_target(const RubixCube& cube, const TargetState& target);
 
 	std::string Solve_IDFS(RubixCube given_cube, const TargetState& target_state, int Depth_Limit);
+	static const int MAX_DEPTH = 12;
+	int path[MAX_DEPTH];
 	bool Solve_DFS_fast(RubixCube current_cube, const TargetState& target_state,
-	                    std::vector<int>& path, int depth_remaining, int prev_move);
+	                    int depth, int depth_remaining, int prev_move);
+
+	// One search stage: search for `target` up to depth_limit and append the moves. Returns false only
+	// when the target is out of reach; an already-satisfied target is success with no moves.
+	bool solve_stage(RubixCube& cube, const TargetState& target, int depth_limit, std::string& all_moves);
+
+	// Speedcuber style: try a short list of known algorithms (each after one of the four D-layer
+	// rotations) at most `max_algs` deep until `target` matches. No search tree beyond that.
+	bool solve_with_algs(RubixCube& cube, const TargetState& target,
+	                           const char* const* algs, int num_algs, int max_algs, std::string& out);
+	bool permute_corners(RubixCube& cube, const TargetState& target, std::string& out);
+	bool permute_edges(RubixCube& cube, const TargetState& target, std::string& out);
 
 	bool has_white_cross(RubixCube& cube);
 	bool has_white_corners(RubixCube& cube);
@@ -107,11 +120,10 @@ private:
         int prev_group = prev_idx / 3;
         // Same face group: sequences like L followed by L' or L2 are redundant
         if (cur_group == prev_group) return true;
-        // Opposite face groups: prune both directions (e.g., L after R and R after L)
-        int diff = cur_group - prev_group;
-        if (diff < 0) diff = -diff;
-        int min_group = (cur_group < prev_group) ? cur_group : prev_group;
-        if (diff == 1 && (min_group % 2 == 0)) return true;
+        // Opposite faces commute (L R == R L), so allow only one ordering of the pair:
+        // the odd group first (R before L, D before U, B before F). Pruning both
+        // orderings would make states that need the pair unreachable.
+        if (cur_group % 2 == 0 && prev_group == cur_group + 1) return true;
         return false;
     }
 
@@ -128,6 +140,8 @@ public:
 		return cube == RubixCube(); // matching a solved cube
 	}
 	std::string Solve_Cube(RubixCube &given_cube, int Depth_Limit);
+	// Called with the moves of each finished stage while Solve_Cube runs (may be empty).
+	std::function<void(const std::string&)> on_stage;
 	void visualize_state();
 	void scramble();
 	RubixCube Apply_Moves(RubixCube &El_Cube, std::string leMoves);

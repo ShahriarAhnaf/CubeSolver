@@ -8,6 +8,8 @@
 #include <vector>
 #include <string>
 #include <queue>
+#include <future>
+#include <mutex>
 
 #include "Cube.h"
 #include "Solver.h"
@@ -75,6 +77,14 @@ private:
     // Cube logic state
     RubixCube cubeModel;
     Solver solver;
+
+    // Solve runs on a worker thread; finished stages land in stageMoves for the render loop.
+    std::future<std::string> solveFuture;
+    std::mutex stageMutex;
+    std::vector<std::string> stageMoves;
+    bool solving() const { return solveFuture.valid(); }
+
+    bool showNet;  // print the text net after each move (T)
 
     void initCubies();
     void syncCubiesFromModel();

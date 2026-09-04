@@ -1,5 +1,6 @@
 #include "Cube.h"
 #include "Solver.h"
+#include "Draw.h"
 #include <iostream>
 #include <ncurses.h>
 #include <string>
@@ -38,7 +39,7 @@ int main() {
 
     while(!quit) {
         // clear();
-        cube.draw(x/4, y/2); // middle of screen
+        draw_cube(cube, x/4, y/2); // middle of screen
         // wrefresh(legend_win);
         refresh();
         switch(mvgetch(0, 0)) {
