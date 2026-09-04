@@ -84,6 +84,8 @@ private:
     std::vector<std::string> stageMoves;
     bool solving() const { return solveFuture.valid(); }
 
+    bool showNet;  // print the text net after each move (T)
+
     void initCubies();
     void syncCubiesFromModel();
     void enqueueMove(int axis, int layer, float direction);

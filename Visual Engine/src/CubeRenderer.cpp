@@ -14,7 +14,7 @@ CubeRenderer::CubeRenderer()
       shaderProgram(0), cubieVAO(0), cubieVBO(0),
       camDistance(6.0f), camYaw(35.0f), camPitch(25.0f),
       mouseDown(false), lastMouseX(0), lastMouseY(0),
-      cubieCount(0), animating(false)
+      cubieCount(0), animating(false), showNet(true)
 {
     memset(keyStates, 0, sizeof(keyStates));
     currentAnim = {};
@@ -40,12 +40,13 @@ void CubeRenderer::initCubies() {
                 for (int f = 0; f < 6; f++) c.faceColors[f] = COL_BLACK;
 
                 // Assign sticker colors based on position
-                if (x ==  1) c.faceColors[RFACE_RIGHT]  = COL_RED;
-                if (x == -1) c.faceColors[RFACE_LEFT]   = COL_ORANGE;
+                // Same colors the model uses: FRONT=RED, RIGHT=GREEN, LEFT=BLUE, BACK=ORANGE
+                if (x ==  1) c.faceColors[RFACE_RIGHT]  = COL_GREEN;
+                if (x == -1) c.faceColors[RFACE_LEFT]   = COL_BLUE;
                 if (y ==  1) c.faceColors[RFACE_TOP]    = COL_WHITE;
                 if (y == -1) c.faceColors[RFACE_BOTTOM] = COL_YELLOW;
-                if (z ==  1) c.faceColors[RFACE_FRONT]  = COL_GREEN;
-                if (z == -1) c.faceColors[RFACE_BACK]   = COL_BLUE;
+                if (z ==  1) c.faceColors[RFACE_FRONT]  = COL_RED;
+                if (z == -1) c.faceColors[RFACE_BACK]   = COL_ORANGE;
             }
         }
     }
@@ -197,13 +198,43 @@ void CubeRenderer::enqueueMove(int axis, int layer, float direction) {
     moveQueue.push(m);
 }
 
+// Print the cube as a text net, so the terminal shows the same state as the 3D view.
+static void printNet(const RubixCube& cube) {
+    static const char COLOR_CHAR[] = "WBRGOY"; // UP, LEFT, FRONT, RIGHT, BACK, BOTTOM
+    // Sticker positions per row: 0,1,2 / 7,centre,3 / 6,5,4
+    static const int ROW[3][3] = { {0,1,2}, {7,-1,3}, {6,5,4} };
+    auto sticker = [&](int face, int slot) {
+        int color = slot < 0 ? face : (int)GET_COLOR(cube.get_face(face), slot);
+        return COLOR_CHAR[color];
+    };
+    for (int r = 0; r < 3; r++) {
+        std::cout << "      ";
+        for (int c = 0; c < 3; c++) std::cout << sticker(FACE_UP, ROW[r][c]) << ' ';
+        std::cout << '\n';
+    }
+    for (int r = 0; r < 3; r++) {
+        for (int f : {FACE_LEFT, FACE_FRONT, FACE_RIGHT, FACE_BACK}) {
+            for (int c = 0; c < 3; c++) std::cout << sticker(f, ROW[r][c]) << ' ';
+            std::cout << ' ';
+        }
+        std::cout << '\n';
+    }
+    for (int r = 0; r < 3; r++) {
+        std::cout << "      ";
+        for (int c = 0; c < 3; c++) std::cout << sticker(FACE_BOTTOM, ROW[r][c]) << ' ';
+        std::cout << '\n';
+    }
+    std::cout << std::endl;
+}
+
 // After animation completes, permute cubie positions and rotate their sticker colors
 void CubeRenderer::commitMove(const MoveAnim& anim) {
-    // Build the same rotation matrix used for animation (90 degrees)
+    // Same rotation as the animation. Negated because glm turns counter-clockwise seen from
+    // the positive axis, while a cube move of +1 direction is clockwise seen from that face.
     glm::vec3 axisVec(0.0f);
     axisVec[anim.axis] = 1.0f;
     glm::mat3 rot = glm::mat3(glm::rotate(glm::mat4(1.0f),
-                               glm::radians(90.0f * anim.direction), axisVec));
+                               glm::radians(-90.0f * anim.direction), axisVec));
 
     // The 6 face normals, indexed by Face enum
     static const glm::vec3 faceNormals[6] = {
@@ -240,6 +271,7 @@ void CubeRenderer::commitMove(const MoveAnim& anim) {
     }
 
     applyMoveToModel(anim.axis, anim.layer, anim.direction);
+    if (showNet) printNet(cubeModel);
 }
 
 void CubeRenderer::addCubieFace(std::vector<float>& verts,
@@ -269,7 +301,7 @@ void CubeRenderer::buildVertices(std::vector<float>& verts) {
         glm::vec3 axisVec(0.0f);
         axisVec[animAxis] = 1.0f;
         animRot = glm::rotate(glm::mat4(1.0f),
-                              glm::radians(currentAnim.angle * currentAnim.direction),
+                              glm::radians(-currentAnim.angle * currentAnim.direction),
                               axisVec);
     }
 
@@ -490,6 +522,17 @@ void CubeRenderer::processInput() {
                                      [this, copy]() mutable { return solver.Solve_Cube(copy, 8); });
         }
         keyStates[GLFW_KEY_SPACE] = pressed;
+    }
+
+    // T: toggle the text net printed after each move
+    {
+        bool pressed = glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS;
+        if (pressed && !keyStates[GLFW_KEY_T]) {
+            showNet = !showNet;
+            std::cout << (showNet ? "Text net: on" : "Text net: off") << std::endl;
+            if (showNet) printNet(cubeModel);
+        }
+        keyStates[GLFW_KEY_T] = pressed;
     }
 
     // M: scramble with 5 random moves
