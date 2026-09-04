@@ -5,6 +5,12 @@ Using Rubix Cube notation implementation
 ## OpenGL Render
 ![alt-text](./img/OpenGL_demo.png "OpenGL demo")
 
+## Scramble and Solve
+Press `M` to scramble, `Space` to solve. Each stage of the solve animates as the solver
+finishes it, and `T` prints the same state as a text net in the terminal.
+
+![alt-text](./img/scramble_solve.gif "Scramble and solve")
+
 
 ## Why is this even a project?
 - Using low level design techniques such as bitwise operations to speed up the base operations for Rubix cube algorithms without needing supercomputer like powers.
