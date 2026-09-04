@@ -357,20 +357,6 @@ std::string Solver::Solve_Cube(RubixCube &given_cube, int Depth_Limit) {
         reported = all_moves.size();
     };
 
-    // Quick solve: try direct full solve with small depth before step-by-step
-    TargetState quick_target;
-    RubixCube quick_solved;
-    for(int i = 0; i < 6; i++)
-        quick_target.faces[i] = quick_solved.get_face(i);
-
-    int quick_depth = std::min(Depth_Limit, 5);
-    std::string quick = Solve_IDFS(given_cube, quick_target, quick_depth);
-    if(!quick.empty()) {
-        given_cube = Apply_Moves(given_cube, quick);
-        if (on_stage) on_stage(quick);
-        return quick;
-    }
-
     // Helper lambda to build a target that preserves two solved layers
     auto set_two_layers = [](TargetState& t) {
         for(int j = 0; j < 8; j++)
